@@ -77,6 +77,19 @@ STORE_SPECIES = {
     "light": 300000, "spike": 400000, "spin": 500000, "eagle": 600000, "blade": 700000,
 }
 
+# Stable store codes - wbuy <code> se kharido (position kabhi nahi badalti)
+SPECIES_CODES = {
+    # commons 301-312
+    "ylightning": 301, "kitsune": 302, "eedragon": 303, "pain": 304,
+    "redlight": 305, "shadow": 306, "cbomb": 307, "buddha": 308,
+    "trex": 309, "sound": 310, "tiger": 311, "blizzard": 312,
+    # rares 321-323
+    "creation": 321, "magma": 322, "quake": 323,
+    # mythics 341-345
+    "light": 341, "spike": 342, "spin": 343, "eagle": 344, "blade": 345,
+}
+_CODE_TO_SID = {v: k for k, v in SPECIES_CODES.items()}
+
 # Rarity ring colors (tiles/cards ke liye)
 RARITY_RING = {
     "common":   (150, 155, 165),
@@ -96,6 +109,14 @@ def compact_price(n: int) -> str:
         s = f"{n / 1000:.1f}".rstrip("0").rstrip(".")
         return s + "K"
     return str(n)
+
+
+async def species_by_code(code: int):
+    """Store code -> species dict ya None."""
+    sid = _CODE_TO_SID.get(code)
+    if not sid:
+        return None
+    return await database.get_species(sid)
 
 # Food items (hunger hearts +1..5)
 FOODS = {
@@ -195,13 +216,26 @@ def render_collection_card(title: str, sections: list, footer: str = ""):
     ICON = 58
     NEUTRAL = (88, 101, 124)
 
-    def _fit_text(text, font, max_w):
-        """Tile me samaane ke liye naam chhota karo (…)."""
-        if d.textlength(text, font=font) <= max_w:
-            return text
-        while text and d.textlength(text + "…", font=font) > max_w:
-            text = text[:-1]
-        return text + "…"
+    def _fit_name(text, font, max_w):
+        """Naam ko 2 lines me wrap karo (har line max_w se chhoti)."""
+        words = text.split()
+        if not words:
+            return [""]
+        lines, cur = [], words[0]
+        for w in words[1:]:
+            if d.textlength(cur + " " + w, font=font) <= max_w:
+                cur += " " + w
+            else:
+                lines.append(cur)
+                cur = w
+        lines.append(cur)
+        # 2 se zyada lines? pehli 2 rakho, dusri truncate
+        if len(lines) > 2:
+            lines = lines[:2]
+            while lines[1] and d.textlength(lines[1] + "…", font=font) > max_w:
+                lines[1] = lines[1][:-1]
+            lines[1] += "…"
+        return lines
 
     secs = [s for s in sections if s["cells"]]
     H = 84
@@ -245,12 +279,13 @@ def render_collection_card(title: str, sections: list, footer: str = ""):
                     break
             if img:
                 card.alpha_composite(img.resize((ICON, ICON)), (x + (TILE_W - ICON) // 2, ty + 10))
-            # naam (icon ke niche)
+            # naam (icon ke niche, 2-line wrap - frame se bahar nahi jayega)
             nm = cell.get("name")
             if nm:
-                nf = _font(14, True)
-                d.text((x + (TILE_W - d.textlength(nm_t := _fit_text(nm, nf, TILE_W - 8))) / 2,
-                        ty + 72), nm_t, font=nf, fill=(228, 232, 240))
+                nf = _font(13, True)
+                for li, line in enumerate(_fit_name(nm, nf, TILE_W - 8)[:2]):
+                    d.text((x + (TILE_W - d.textlength(line, font=nf)) / 2,
+                            ty + 70 + li * 15), line, font=nf, fill=(228, 232, 240))
             # badge (top-left, e.g. store index)
             badge = cell.get("badge")
             if badge:
@@ -918,11 +953,15 @@ async def handle_buy(ctx, lang: str, kind: str, ref):
         if ref is None or not str(ref).isdigit():
             return await ctx.send(i18n.t(lang, "an_buy_usage", prefix=ctx.clean_prefix,
                                          mention=ctx.author.mention))
-        idx = int(ref)
-        species = [s for s in await database.get_all_species() if s["in_store"]]
-        if idx < 1 or idx > len(species):
+        num = int(ref)
+        sp = await species_by_code(num)
+        if sp is None:
+            # fallback: purana position-index (shop listing ka #number)
+            species = [s for s in await database.get_all_species() if s["in_store"]]
+            if 1 <= num <= len(species):
+                sp = species[num - 1]
+        if sp is None or not sp.get("in_store"):
             return await ctx.send(i18n.t(lang, "an_buy_bad_id", mention=ctx.author.mention))
-        sp = species[idx - 1]
         if balance < sp["price"]:
             return await ctx.send(i18n.t(lang, "m_poor", coin=COIN, balance=balance,
                                          mention=ctx.author.mention))

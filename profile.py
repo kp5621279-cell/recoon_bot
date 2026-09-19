@@ -520,7 +520,8 @@ class Profile(commands.Cog):
     async def shop_payload(self, ctx, lang, section: str, render_fn=None):
         """(embed, file|None) - animals/food/abilities image card ke saath (bade icons).
         render_fn async ho sakta hai (thread me chalta hai) - loop block na ho."""
-        from animals import FOODS, ABILITIES, RARITY_RING, compact_price
+        from animals import (FOODS, ABILITIES, RARITY_RING, compact_price,
+                             SPECIES_CODES)
         if render_fn is None:
             from animals import render_collection_card as render_fn_sync
             async def render_fn(t, s, f):
@@ -528,7 +529,8 @@ class Profile(commands.Cog):
         if section == "animals":
             species = [s for s in await database.get_all_species() if s["in_store"]]
             cells = [{"emoji": s["emoji"], "name": s["name"], "count": compact_price(s["price"]),
-                      "star": False, "ring": RARITY_RING.get(s["rarity"]), "badge": f"#{i}"}
+                      "star": False, "ring": RARITY_RING.get(s["rarity"]),
+                      "badge": f"#{SPECIES_CODES.get(s['id'], i)}"}
                      for i, s in enumerate(species, 1)]
             title = i18n.t(lang, "an_shop_animals")
             buf = await render_fn(
