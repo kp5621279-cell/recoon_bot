@@ -23,6 +23,31 @@ UA_HEADERS = {
 # Custom server emoji shown wherever the bot mentions coins
 COIN = "<:coin:1550545065397584066>"
 
+# Prayer emoji (pray command + luck messages)
+PRAY_EMOJI = "<:praying:1550871729289695352>"
+
+# ------------------- Luck system (shared by all games) -------------------
+LUCK_PER_PRAY = 15.0   # ek prayer kitna luck deta hai
+LUCK_FREE_DAILY = 10.0  # lkf (daily free luck)
+LUCK_PER_GAME = 35.0    # ek game khelne par kitna luck consume hota hai
+
+async def consume_luck(user_id: int) -> float:
+    """Ek game start hote waqt luck ka min(luck, 35)% use karo. Bacha luck return."""
+    luck = await database.get_luck(user_id)
+    if luck <= 0:
+        return 0.0
+    used = min(luck, LUCK_PER_GAME)
+    return await database.add_luck(user_id, -used)
+
+def luck_shift(luck: float) -> float:
+    """Luck ko 0-1 signed factor me convert karo (-0.35 se +0.35).
+
+    Games isko random rolls me mix karte hain: positive luck (prayers/free)
+    outcome player ke favour me khiska deta hai, aur har game luck thoda
+    kam kar deta hai (consume_luck).
+    """
+    return max(-0.35, min(0.35, luck / 100.0))
+
 # Dynamic prefix getter
 async def get_dynamic_prefix(bot, message):
     if not message.guild:
@@ -59,7 +84,7 @@ class CustomHelpCommand(commands.HelpCommand):
             cmd_info = f"**{self.context.clean_prefix}{command.name}** - {desc}"
             if command.name in ["coin", "aviator", "mine", "slots"]:
                 games_cmds.append(cmd_info)
-            elif command.name in ["bal", "daily", "req", "pay"]:
+            elif command.name in ["bal", "daily", "req", "pay", "pray", "luck", "lkf"]:
                 econ_cmds.append(cmd_info)
             elif command.name in ["ping", "help", "invite", "lang"]:
                 config_cmds.append(cmd_info)
@@ -693,7 +718,10 @@ async def coin_flip(ctx: commands.Context, bet: int, choice: str = None):
     result_side = "Heads" if result_is_heads else "Tails"
 
     win = (user_choice_is_heads == result_is_heads)
-    
+    # Luck bias: lucky user ko ek doosra chance milta hai (fair roll ke baad)
+    if not win and await database.get_luck(ctx.author.id) >= 100:
+        win = secrets.randbelow(10_000) < 9_000
+
     # The animation provided by user
     animation = "<a:pikuracoin20749_512:1550522369175593061>"
     win_anim = "<a:grabill54congratulations13773_51:1550523083373416609>"
@@ -795,6 +823,90 @@ async def pay_coins(ctx: commands.Context, amount: int, target: discord.Member):
         await target.send(f"💰 **{ctx.author.display_name}** sent you **{amount}** {COIN}!")
     except discord.Forbidden:
         pass  # their DMs are closed, the coins still arrived
+
+
+def _today() -> str:
+    """UTC date string - prayer per-day limit isi se track hoti hai."""
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+@bot.command(name="pray", aliases=["p"])
+async def pray(ctx: commands.Context, target: discord.Member = None):
+    """Pray for someone to give them +15% luck (once per day per target)."""
+    lang = await database.get_lang(ctx.author.id)
+    if target is None:
+        return await ctx.send(i18n.t(lang, "missing_arg", param="user", mention=ctx.author.mention))
+    if target.bot:
+        return await ctx.send(i18n.t(lang, "pray_target_bot", mention=ctx.author.mention))
+    if target.id == ctx.author.id:
+        return await ctx.send(i18n.t(lang, "pray_self", mention=ctx.author.mention))
+
+    target_data = await database.get_user(target.id)
+    if not target_data or not target_data["agreed"]:
+        return await ctx.send(i18n.t(lang, "pray_not_agreed", user=target.display_name, mention=ctx.author.mention))
+
+    day = _today()
+    if await database.pray_count_today(ctx.author.id, target.id, day):
+        return await ctx.send(i18n.t(lang, "pray_already", user=target.display_name, mention=ctx.author.mention))
+
+    await database.save_prayer(ctx.author.id, target.id, day)
+    new_luck = await database.add_luck(target.id, LUCK_PER_PRAY)
+    await database.cleanup_old_prayers()
+
+    await ctx.send(i18n.t(
+        lang, "pray_ok",
+        emoji=PRAY_EMOJI, ball="🔮",
+        sender=ctx.author.display_name, receiver=target.display_name,
+        amount=int(LUCK_PER_PRAY), luck=new_luck,
+        mention=ctx.author.mention,
+    ))
+
+
+@bot.command(name="luck", aliases=["lk"])
+async def luck_cmd(ctx: commands.Context):
+    """Check your current luck percentage."""
+    lang = await database.get_lang(ctx.author.id)
+    luck = await database.get_luck(ctx.author.id)
+
+    filled = int(round(luck / 10))
+    bar = "\u25a3" * filled + "\u25a1" * (10 - filled)
+
+    if luck >= 100:
+        status = i18n.t(lang, "luck_bar_full", consume=int(LUCK_PER_GAME))
+    elif luck > 0:
+        status = i18n.t(lang, "luck_bar_partial", consume=int(LUCK_PER_GAME))
+    else:
+        status = i18n.t(lang, "luck_bar_zero", prefix=ctx.clean_prefix)
+
+    embed = discord.Embed(
+        title=i18n.t(lang, "luck_title"),
+        description=f"{bar}\n\U0001F52E **{luck:.0f}% / 100%**",
+        color=discord.Color.gold() if luck >= 100 else discord.Color.blurple(),
+    )
+    embed.add_field(name="\u200b", value=status, inline=False)
+    embed.add_field(name="\u200b", value=i18n.t(lang, "luck_how", emoji=PRAY_EMOJI, prefix=ctx.clean_prefix), inline=False)
+    embed.set_thumbnail(url=BANNER_URL)
+    await ctx.send(f"{ctx.author.mention}", embed=embed)
+
+
+@bot.command(name="lkf", aliases=["luckfree"])
+async def luck_free(ctx: commands.Context):
+    """Claim your free daily +10% luck."""
+    import time
+    lang = await database.get_lang(ctx.author.id)
+
+    last = await database.get_luck_free_time(ctx.author.id)
+    now = time.time()
+    cooldown = 12 * 3600
+    if now - last < cooldown:
+        time_left = int(cooldown - (now - last))
+        hours, minutes = time_left // 3600, (time_left % 3600) // 60
+        return await ctx.send(i18n.t(lang, "lkf_wait", time=f"{hours}h {minutes}m", emoji=PRAY_EMOJI, mention=ctx.author.mention))
+
+    await database.set_luck_free_time(ctx.author.id, now)
+    new_luck = await database.add_luck(ctx.author.id, LUCK_FREE_DAILY)
+    await ctx.send(i18n.t(lang, "lkf_ok", emoji=PRAY_EMOJI, luck=new_luck, mention=ctx.author.mention))
 
 
 @bot.command(name="bal", aliases=["balance", "coins", "cash"])

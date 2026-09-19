@@ -48,7 +48,7 @@ def parse_spec(spec: str):
 class MinesGame:
     """Ek chalu mines game ka pure logic - discord layer ise render karta hai."""
 
-    def __init__(self, player_id: int, bet: int, size: int, bombs: int, label: str):
+    def __init__(self, player_id: int, bet: int, size: int, bombs: int, label: str, luck_shift: float = 0.0):
         self.player_id = player_id
         self.bet = bet
         self.size = size
@@ -57,7 +57,17 @@ class MinesGame:
         self.gems = self.total - bombs
         self.label = label
         self.lang = "en"  # game start hone par player ki language set hoti hai
+
+        # Luck bias: +35 luck ke saath ~33% chance ki bomb swap ho kar safe tile ban jaye
         self.bomb_set = set(secrets.SystemRandom().sample(range(self.total), bombs))
+        if luck_shift > 0 and bombs < self.total:
+            safe = [i for i in range(self.total) if i not in self.bomb_set]
+            for i in list(self.bomb_set):
+                if secrets.randbelow(10_000) < int(luck_shift * 10_000):
+                    swap = secrets.choice(safe)
+                    self.bomb_set.discard(i)
+                    self.bomb_set.add(swap)
+                    safe.append(i)
         self.revealed = set()
         self.hit = None          # jis tile par bomb phata
         self.over = False
@@ -406,7 +416,11 @@ class ModeSelectView(discord.ui.View):
         for child in self.children:
             child.disabled = True
 
-        game = MinesGame(self.ctx.author.id, self.bet, size, bombs, label)
+        from bot import consume_luck, luck_shift
+        game = MinesGame(
+            self.ctx.author.id, self.bet, size, bombs, label,
+            luck_shift=luck_shift(await consume_luck(self.ctx.author.id)),
+        )
         MINES_ACTIVE[self.ctx.author.id] = game
         await database.update_coins(self.ctx.author.id, -self.bet)
 

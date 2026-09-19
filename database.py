@@ -57,6 +57,25 @@ async def init_db():
         except Exception:
             pass
 
+        try:
+            await db.execute('ALTER TABLE users ADD COLUMN luck REAL DEFAULT 0')
+        except Exception:
+            pass
+
+        try:
+            await db.execute('ALTER TABLE users ADD COLUMN last_luck_free REAL DEFAULT 0')
+        except Exception:
+            pass
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS prayers (
+                pray_from INTEGER NOT NULL,
+                pray_to   INTEGER NOT NULL,
+                day       TEXT NOT NULL,
+                PRIMARY KEY (pray_from, pray_to, day)
+            )
+        ''')
+
         await db.execute('''
             CREATE TABLE IF NOT EXISTS voice_channels (
                 guild_id INTEGER PRIMARY KEY,
@@ -117,10 +136,19 @@ async def get_all_voice_channels():
 
 async def get_user(user_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute('SELECT coins, agreed, last_daily FROM users WHERE user_id = ?', (user_id,)) as cursor:
+        async with db.execute(
+            'SELECT coins, agreed, last_daily, luck, last_luck_free FROM users WHERE user_id = ?',
+            (user_id,),
+        ) as cursor:
             row = await cursor.fetchone()
             if row:
-                return {"coins": row[0], "agreed": bool(row[1]), "last_daily": row[2] or 0}
+                return {
+                    "coins": row[0],
+                    "agreed": bool(row[1]),
+                    "last_daily": row[2] or 0,
+                    "luck": row[3] or 0,
+                    "last_luck_free": row[4] or 0,
+                }
             return None
 
 async def create_user(user_id: int, coins: int = 1000):
@@ -260,6 +288,74 @@ async def clear_all_disabled(guild_id: int):
     """Server ke saare disable hatayo (channel-wise + server-wide)."""
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute('DELETE FROM disabled_channels WHERE guild_id = ?', (guild_id,))
+        await db.commit()
+
+async def get_luck(user_id: int) -> float:
+    """User ka luck percentage (0-100). Bina account ke 0."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT luck FROM users WHERE user_id = ?', (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            return (row[0] if row and row[0] else 0) or 0
+
+async def set_luck(user_id: int, value: float):
+    """Luck set karo (0-100 range clamp). User exist na kare to bana do."""
+    value = max(0.0, min(100.0, value))
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('''
+            INSERT INTO users (user_id, coins, agreed, luck)
+            VALUES (?, 1000, TRUE, ?)
+            ON CONFLICT(user_id) DO UPDATE SET luck = ?
+        ''', (user_id, value, value))
+        await db.commit()
+
+async def add_luck(user_id: int, amount: float) -> float:
+    """Luck add (positive ya negative), clamp 0-100. Naya luck return karo."""
+    current = await get_luck(user_id)
+    new_value = max(0.0, min(100.0, current + amount))
+    await set_luck(user_id, new_value)
+    return new_value
+
+async def get_luck_free_time(user_id: int) -> float:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT last_luck_free FROM users WHERE user_id = ?', (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            return (row[0] if row else 0) or 0
+
+async def set_luck_free_time(user_id: int, timestamp: float):
+    """Daily free-luck claim time save karo (user banao agar nahi hai)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('''
+            INSERT INTO users (user_id, coins, agreed, last_luck_free)
+            VALUES (?, 1000, TRUE, ?)
+            ON CONFLICT(user_id) DO UPDATE SET last_luck_free = excluded.last_luck_free
+        ''', (user_id, timestamp))
+        await db.commit()
+
+async def pray_count_today(pray_from: int, pray_to: int, day: str) -> int:
+    """Aaj is user ne kitni baar target ko pray kiya (0 ya 1)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            'SELECT 1 FROM prayers WHERE pray_from = ? AND pray_to = ? AND day = ?',
+            (pray_from, pray_to, day),
+        ) as cursor:
+            return 1 if await cursor.fetchone() else 0
+
+async def save_prayer(pray_from: int, pray_to: int, day: str):
+    """Prayer record karo (per-day unique - duplicate silently ignore)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            'INSERT OR IGNORE INTO prayers (pray_from, pray_to, day) VALUES (?, ?, ?)',
+            (pray_from, pray_to, day),
+        )
+        await db.commit()
+
+async def cleanup_old_prayers(days_to_keep: int = 2):
+    """Purane prayer records delete (table chhoti rahe). day format: YYYY-MM-DD."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "DELETE FROM prayers WHERE day < date('now', ?)",
+            (f'-{days_to_keep} days',),
+        )
         await db.commit()
 
 async def get_lang(user_id: int) -> str:

@@ -20,9 +20,11 @@ PAYOUT_2 = {"💔": 40, "🍒": 14, "💜": 8, "🍌": 5, "🍆": 0}
 WEIGHTS = {"🍆": 10, "🍌": 6, "💜": 5, "🍒": 4, "💔": 2}
 
 
-def _weighted() -> str:
+def _weighted(luck_shift: float = 0.0) -> str:
+    """Weighted spin; luck_shift (+0..0.35) rare symbols ki taraf khiskata hai."""
     total = sum(WEIGHTS.values())
     r = secrets.randbelow(total)
+    r = int(max(0.0, 1.0 + luck_shift) * r)  # luck positive -> r chhota -> rare (pehle) symbol zyada
     upto = 0
     for sym, w in WEIGHTS.items():
         upto += w
@@ -33,8 +35,8 @@ def _weighted() -> str:
 SLOTS_ACTIVE = set()  # ek user ka ek spin ek time par
 
 
-def spin() -> list:
-    return [_weighted() for _ in range(3)]
+def spin(luck_shift: float = 0.0) -> list:
+    return [_weighted(luck_shift) for _ in range(3)]
 
 
 def evaluate(reels: list, bet: int):
@@ -75,7 +77,8 @@ class Slots(commands.Cog):
         try:
             await database.update_coins(ctx.author.id, -bet)
 
-            reels = spin()
+            from bot import consume_luck, luck_shift
+            reels = spin(max(0.0, luck_shift(await consume_luck(ctx.author.id))))
             mult, win_key = evaluate(reels, bet)
             win_amount = int(bet * mult)
 

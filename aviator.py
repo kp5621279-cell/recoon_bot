@@ -34,7 +34,7 @@ def multiplier_at(elapsed: float) -> float:
     """Rocket height after `elapsed` seconds."""
     return math.exp(GROWTH * elapsed)
 
-def roll_crash_point() -> float:
+def roll_crash_point(luck_shift: float = 0.0) -> float:
     """Pick where the rocket blows up.
 
     The classic crash curve, capped at MAX_CRASH: ~1% of rounds die instantly at
@@ -42,8 +42,13 @@ def roll_crash_point() -> float:
     the curve is cut at 10x, cashing out at any target x always returns 0.99 * x
     on average - the 99 (instead of 100) is a flat 1% house edge, no matter where
     players cash out.
+
+    luck_shift (-0.35..+0.35) biases the draw: at +0.35 the ~15s flight time
+    before an average crash roughly doubles (rocket lasts noticeably longer),
+    at -0.35 it halves. Consumed per game, so it never stacks.
     """
     r = secrets.randbelow(1_000_000) / 1_000_000
+    r = min(1.0, max(1e-6, r - luck_shift))
     return min(MAX_CRASH, max(1.0, round(99 / (1 - r)) / 100))
 
 def sky_frame(multiplier: float, rocket=ROCKET, blast=False) -> str:
@@ -206,7 +211,9 @@ class Aviator(commands.Cog):
         # Take the bet up front, like the coin flip does.
         await database.update_coins(ctx.author.id, -bet)
 
-        round_ = AviatorRound(self, ctx.author, bet, user_data["coins"], roll_crash_point())
+        from bot import consume_luck, luck_shift
+        shift = luck_shift(await consume_luck(ctx.author.id))
+        round_ = AviatorRound(self, ctx.author, bet, user_data["coins"], roll_crash_point(shift))
         self.active[ctx.author.id] = round_
         round_.view = AviatorView(round_)
         round_.message = await ctx.send(embed=round_.flying_embed(1.0), view=round_.view)
