@@ -170,5 +170,7 @@
   "h_banner": "Pakai banner yang dimiliki.",
   "h_setabout": "Atur teks Tentang saya di profilmu.",
   "h_addbanner": "(Owner) Tambah banner custom dari gambar terlampir.",
-  "level_up": "🎉 {user} **LEVEL UP!** Kamu mencapai **Level {level}**! Bonus: **+{amount}** {coin}"
+  "level_up": "🎉 {user} **LEVEL UP!** Kamu mencapai **Level {level}**! Bonus: **+{amount}** {coin}",
+  "pc_xp_left": "Tinggal {left} XP ke level berikutnya!",
+  "xp_gain": "{mention} ✨ **+{amount} XP** didapat! (total {total} XP)"
 }

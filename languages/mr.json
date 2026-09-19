@@ -170,5 +170,7 @@
   "h_banner": "घेतलेले बॅनर लावा.",
   "h_setabout": "प्रोफाइलचे About me सेट करा.",
   "h_addbanner": "(Owner) इमेज attach करून custom बॅनर टाका.",
-  "level_up": "🎉 {user} **LEVEL UP!** तू **Level {level}** पोहोचलास! बोनस: **+{amount}** {coin}"
+  "level_up": "🎉 {user} **LEVEL UP!** तू **Level {level}** पोहोचलास! बोनस: **+{amount}** {coin}",
+  "pc_xp_left": "पुढच्या लेव्हलसाठी फक्त {left} XP!",
+  "xp_gain": "{mention} ✨ **+{amount} XP** मिळाले! (एकूण {total} XP)"
 }

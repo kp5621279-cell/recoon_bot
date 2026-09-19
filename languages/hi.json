@@ -170,5 +170,7 @@
   "h_banner": "Kharida hua banner equippo.",
   "h_setabout": "Profile ke About me text set karo.",
   "h_addbanner": "(Owner) Image attach karke custom banner add karo.",
-  "level_up": "🎉 {user} **LEVEL UP!** Tum **Level {level}** par pahunch gaye! Bonus: **+{amount}** {coin}"
+  "level_up": "🎉 {user} **LEVEL UP!** Tum **Level {level}** par pahunch gaye! Bonus: **+{amount}** {coin}",
+  "pc_xp_left": "Next level tak sirf {left} XP!",
+  "xp_gain": "{mention} ✨ **+{amount} XP** mile! (total {total} XP)"
 }

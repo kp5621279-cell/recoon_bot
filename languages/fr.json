@@ -170,5 +170,7 @@
   "h_banner": "Équiper une bannière possédée.",
   "h_setabout": "Définir le À propos de ton profil.",
   "h_addbanner": "(Owner) Ajouter une bannière personnalisée depuis une image.",
-  "level_up": "🎉 {user} **NIVEAU SUPÉRIEUR !** Tu atteins le **Niveau {level}** ! Bonus : **+{amount}** {coin}"
+  "level_up": "🎉 {user} **NIVEAU SUPÉRIEUR !** Tu atteins le **Niveau {level}** ! Bonus : **+{amount}** {coin}",
+  "pc_xp_left": "Encore {left} XP pour le prochain niveau !",
+  "xp_gain": "{mention} ✨ **+{amount} XP** gagnés ! ({total} XP au total)"
 }

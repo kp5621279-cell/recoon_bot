@@ -170,5 +170,7 @@
   "h_banner": "Equip an owned banner.",
   "h_setabout": "Set your profile's About me text.",
   "h_addbanner": "(Owner) Add a custom banner from an attached image.",
-  "level_up": "🎉 {user} **LEVEL UP!** You reached **Level {level}**! Bonus: **+{amount}** {coin}"
+  "level_up": "🎉 {user} **LEVEL UP!** You reached **Level {level}**! Bonus: **+{amount}** {coin}",
+  "pc_xp_left": "{left} XP to next level up!",
+  "xp_gain": "{mention} ✨ **+{amount} XP** earned! ({total} XP total)"
 }

@@ -175,6 +175,11 @@ def render_profile_card(
     rank_txt = f"{texts.get('rank_lbl', 'Rank')}: #{rank}"
     dr.text((bar_x + bar_w + 25, bar_y - 6), rank_txt, font=f_med, fill=(255, 255, 255))
 
+    # XP hint line: level up ke liye kitna bacha hai
+    hint = texts.get("xp_left", "")
+    if hint:
+        dr.text((bar_x, bar_y + bar_h + 8), hint, font=f_tiny, fill=(160, 200, 255))
+
     # ---------------- Bottom stats panel ----------------
     sy = panel_top + 34
     coin_name = texts.get("coin_txt", "")
@@ -231,6 +236,7 @@ class Profile(commands.Cog):
         # Progress: current level ke andar ka XP vs next level tak ka gap
         in_level = xp - cur_base
         need = max(1, next_base - cur_base)
+        left = max(0, next_base - xp)
         xp_val = f"{in_level} / {need}"
 
         banner = await database.get_equipped_banner(member.id)
@@ -244,6 +250,7 @@ class Profile(commands.Cog):
             "about_default": i18n.t(lang, "pc_about_default"),
             "joined_lbl": i18n.t(lang, "pc_joined"),
             "xp_val": xp_val,
+            "xp_left": i18n.t(lang, "pc_xp_left", left=left),
             "coin_txt": "\U0001FA99",
         }
 

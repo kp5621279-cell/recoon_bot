@@ -34,14 +34,25 @@ LUCK_PER_GAME = 35.0    # ek game khelne par kitna luck consume hota hai
 XP_PER_GAME = 10        # har game khelne par XP
 LEVEL_BONUS_COINS = 500  # level-up par bonus coins
 
-async def game_xp(ctx_or_user, amount: int = None):
-    """XP do aur level-up hone par channel me celebrate karo.
+async def game_xp(ctx_or_user, amount: int = None, show_gain: bool = True):
+    """XP do, XP-gain notice bhejo, aur level-up hone par celebrate karo.
 
     ctx_or_user = commands.Context (channel me notice bhejega) ya sirf user_id (silent).
     """
     try:
         user_id = ctx_or_user.author.id if hasattr(ctx_or_user, "author") else ctx_or_user
-        old_level, new_level = await database.add_xp_with_levelup(user_id, amount or XP_PER_GAME)
+        amt = amount or XP_PER_GAME
+        old_level, new_level = await database.add_xp_with_levelup(user_id, amt)
+
+        # XP gain notice (level-up ke case me level-up message kaafi hai)
+        if show_gain and new_level == old_level and hasattr(ctx_or_user, "channel"):
+            lang = await database.get_lang(user_id)
+            total = await database.get_xp(user_id)
+            await ctx_or_user.send(i18n.t(
+                lang, "xp_gain",
+                mention=f"<@{user_id}>", amount=amt, total=total,
+            ))
+
         if new_level > old_level and hasattr(ctx_or_user, "channel"):
             lang = await database.get_lang(user_id)
             await ctx_or_user.send(i18n.t(

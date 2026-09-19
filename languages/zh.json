@@ -170,5 +170,7 @@
   "h_banner": "装备已拥有的横幅。",
   "h_setabout": "设置资料卡的关于我文本。",
   "h_addbanner": "（管理员）从附件图片添加自定义横幅。",
-  "level_up": "🎉 {user} **升级！** 你达到了 **等级 {level}**！奖励：**+{amount}** {coin}"
+  "level_up": "🎉 {user} **升级！** 你达到了 **等级 {level}**！奖励：**+{amount}** {coin}",
+  "pc_xp_left": "距离下一级只需 {left} XP！",
+  "xp_gain": "{mention} ✨ 获得 **+{amount} XP**！（共 {total} XP）"
 }
