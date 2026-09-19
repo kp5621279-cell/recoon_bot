@@ -354,5 +354,9 @@
   "an_zoo_points": "🏅 Points de zoo : {points}",
   "an_inv_food": "🍖 Nourriture",
   "an_inv_shards": "💠 Éclats",
-  "an_inv_abilities": "⚡ Capacités"
+  "an_inv_abilities": "⚡ Capacités",
+  "an_zoo_animals": "🐾 Animaux",
+  "an_zoo_points_short": "Points de zoo",
+  "an_shop_rarity_line": "Choix rares - les autres se trouvent en chassant !",
+  "an_shop_price_line": "Prix en pieces"
 }

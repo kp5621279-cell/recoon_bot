@@ -354,5 +354,9 @@
   "an_zoo_points": "🏅 動物園ポイント：{points}",
   "an_inv_food": "🍖 食料",
   "an_inv_shards": "💠 欠片",
-  "an_inv_abilities": "⚡ アビリティ"
+  "an_inv_abilities": "⚡ アビリティ",
+  "an_zoo_animals": "🐾 動物",
+  "an_zoo_points_short": "動物園ポイント",
+  "an_shop_rarity_line": "レア枠 - 残りは狩りでGET！",
+  "an_shop_price_line": "価格（コイン）"
 }

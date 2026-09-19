@@ -354,5 +354,9 @@
   "an_zoo_points": "🏅 动物园积分：{points}",
   "an_inv_food": "🍖 食物",
   "an_inv_shards": "💠 碎片",
-  "an_inv_abilities": "⚡ 能力"
+  "an_inv_abilities": "⚡ 能力",
+  "an_zoo_animals": "🐾 动物",
+  "an_zoo_points_short": "动物园积分",
+  "an_shop_rarity_line": "稀有之选 - 其余靠打猎获得！",
+  "an_shop_price_line": "价格（金币）"
 }

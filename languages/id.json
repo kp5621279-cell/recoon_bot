@@ -354,5 +354,9 @@
   "an_zoo_points": "🏅 Poin Kebun Binatang: {points}",
   "an_inv_food": "🍖 Makanan",
   "an_inv_shards": "💠 Shard",
-  "an_inv_abilities": "⚡ Ability"
+  "an_inv_abilities": "⚡ Ability",
+  "an_zoo_animals": "🐾 Hewan",
+  "an_zoo_points_short": "Poin Kebun Binatang",
+  "an_shop_rarity_line": "Pilihan langka - sisanya dari berburu!",
+  "an_shop_price_line": "Harga (koin)"
 }

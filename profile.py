@@ -397,8 +397,15 @@ class ShopView(discord.ui.View):
         section = select.values[0]
         for opt in self.shop_select.options:
             opt.default = (opt.value == section)
-        embed = await self.cog.shop_embed(self.ctx, self.lang, section)
-        await interaction.response.edit_message(embed=embed, view=self)
+        embed, file = await self.cog.shop_payload(self.ctx, self.lang, section)
+        try:
+            if file:
+                await interaction.response.edit_message(embed=embed, view=self,
+                                                        files=[file], attachments=[])
+            else:
+                await interaction.response.edit_message(embed=embed, view=self, attachments=[])
+        except discord.HTTPException:
+            await interaction.response.edit_message(embed=embed, view=self)
 
     async def on_timeout(self):
         try:
@@ -497,38 +504,55 @@ class Profile(commands.Cog):
             section = "abilities"
         if section not in ("banners", "animals", "food", "abilities"):
             section = "banners"
-        embed = await self.shop_embed(ctx, lang, section)
+        embed, file = await self.shop_payload(ctx, lang, section)
         view = ShopView(ctx, lang, self, section)
-        msg = await ctx.send(embed=embed, view=view)
+        if file:
+            msg = await ctx.send(file=file, embed=embed, view=view)
+        else:
+            msg = await ctx.send(embed=embed, view=view)
         view.message = msg
 
-    async def shop_embed(self, ctx, lang, section: str) -> discord.Embed:
-        """Kisi bhi section ka shop embed banao (dropdown + command dono use karte hain)."""
-        from animals import FOODS, ABILITIES, RARITY_META
-        COIN_A = "<:coin:1550545065397584066>"
+    async def shop_payload(self, ctx, lang, section: str):
+        """(embed, file|None) - animals/food/abilities image card ke saath (bade icons)."""
+        from animals import FOODS, ABILITIES, render_collection_card
         if section == "animals":
             species = [s for s in await database.get_all_species() if s["in_store"]]
-            lines = [f"`#{i}` {s['emoji']} **{s['name']}** — {s['price']} {COIN_A} "
-                     f"({RARITY_META[s['rarity']]['emoji']} {s['rarity'].title()})"
+            cells = [{"emoji": s["emoji"], "count": f"#{i}", "star": False}
                      for i, s in enumerate(species, 1)]
-            embed = discord.Embed(title=i18n.t(lang, "an_shop_animals"),
-                                  description="\n".join(lines) or "—",
-                                  color=discord.Color.orange())
-        elif section == "food":
-            lines = [f"{f['emoji']} **{f['name']}** — {f['price']} {COIN_A} (+{f['hearts']}❤️)"
+            title = i18n.t(lang, "an_shop_animals")
+            buf = render_collection_card(
+                title,
+                [{"label": i18n.t(lang, "an_shop_rarity_line"), "cells": cells}],
+                i18n.t(lang, "an_shop_buy", prefix=ctx.clean_prefix),
+            )
+            embed = discord.Embed(title=title, color=discord.Color.orange())
+            embed.set_image(url="attachment://shop.png")
+            return embed, discord.File(buf, "shop.png")
+        if section == "food":
+            title = i18n.t(lang, "an_shop_food")
+            cells = [{"emoji": f["emoji"], "count": str(f["price"]), "star": False}
                      for f in FOODS.values()]
-            embed = discord.Embed(title=i18n.t(lang, "an_shop_food"),
-                                  description="\n".join(lines), color=discord.Color.red())
-        elif section == "abilities":
-            lines = [f"{a['emoji']} **{a['name']}** — {a['price']} {COIN_A} — {a['desc']}"
+            buf = render_collection_card(
+                title,
+                [{"label": i18n.t(lang, "an_shop_price_line"), "cells": cells}],
+                i18n.t(lang, "an_shop_buy", prefix=ctx.clean_prefix),
+            )
+            embed = discord.Embed(title=title, color=discord.Color.red())
+            embed.set_image(url="attachment://shop.png")
+            return embed, discord.File(buf, "shop.png")
+        if section == "abilities":
+            title = i18n.t(lang, "an_shop_abilities")
+            cells = [{"emoji": a["emoji"], "count": str(a["price"]), "star": False}
                      for a in ABILITIES.values()]
-            embed = discord.Embed(title=i18n.t(lang, "an_shop_abilities"),
-                                  description="\n".join(lines), color=discord.Color.blurple())
-        else:
-            return await self._banner_embed(ctx, lang)
-        embed.set_thumbnail(url=BANNER_URL)
-        embed.set_footer(text=i18n.t(lang, "an_shop_buy", prefix=ctx.clean_prefix))
-        return embed
+            buf = render_collection_card(
+                title,
+                [{"label": i18n.t(lang, "an_shop_price_line"), "cells": cells}],
+                i18n.t(lang, "an_shop_buy", prefix=ctx.clean_prefix),
+            )
+            embed = discord.Embed(title=title, color=discord.Color.blurple())
+            embed.set_image(url="attachment://shop.png")
+            return embed, discord.File(buf, "shop.png")
+        return await self._banner_embed(ctx, lang), None
 
     async def _banner_embed(self, ctx, lang):
         all_b = await database.get_all_banners()
@@ -563,6 +587,21 @@ class Profile(commands.Cog):
         """Buy: wbuy banner <id> | wbuy animal <#> | wbuy food <name> | wbuy ability <name>"""
         lang = await database.get_lang(ctx.author.id)
         item = (item or "").lower()
+
+        # Shortcut: wbuy <food|ability-name>  (hotdog, pizza, lightning, ...)
+        from animals import FOODS as _FOODS, ABILITIES as _ABILITIES
+        if item in _FOODS:
+            from animals import handle_buy
+            return await handle_buy(ctx, lang, "food", item)
+        if item in _ABILITIES:
+            from animals import handle_buy
+            return await handle_buy(ctx, lang, "ability", item)
+
+        # Shortcut: wbuy <number> = animal store index (banners ko banner likhna zaroori)
+        if item.isdigit() and ref is None:
+            from animals import handle_buy
+            return await handle_buy(ctx, lang, "animal", item)
+
         if item in ("animal", "food", "ability"):
             from animals import handle_buy
             return await handle_buy(ctx, lang, item, ref)

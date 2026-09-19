@@ -354,5 +354,9 @@
   "an_zoo_points": "🏅 نقاط الحديقة: {points}",
   "an_inv_food": "🍖 طعام",
   "an_inv_shards": "💠 شظايا",
-  "an_inv_abilities": "⚡ قدرات"
+  "an_inv_abilities": "⚡ قدرات",
+  "an_zoo_animals": "🐾 حيوانات",
+  "an_zoo_points_short": "نقاط الحديقة",
+  "an_shop_rarity_line": "اختيارات نادرة - الباقي بالصيد!",
+  "an_shop_price_line": "السعر بالعملات"
 }

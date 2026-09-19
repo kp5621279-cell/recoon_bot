@@ -374,5 +374,9 @@
   "an_zoo_points": "🏅 Zoo Points: {points}",
   "an_inv_food": "🍖 Food",
   "an_inv_shards": "💠 Shards",
-  "an_inv_abilities": "⚡ Abilities"
+  "an_inv_abilities": "⚡ Abilities",
+  "an_zoo_animals": "🐾 Animals",
+  "an_zoo_points_short": "Zoo Points",
+  "an_shop_rarity_line": "Rare picks - hunt me baaki milte hain!",
+  "an_shop_price_line": "Price in coins"
 }

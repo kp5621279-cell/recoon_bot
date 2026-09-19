@@ -354,5 +354,9 @@
   "an_zoo_points": "🏅 प्राणी गुण: {points}",
   "an_inv_food": "🍖 खाणे",
   "an_inv_shards": "💠 शार्ड",
-  "an_inv_abilities": "⚡ क्षमता"
+  "an_inv_abilities": "⚡ क्षमता",
+  "an_zoo_animals": "🐾 प्राणी",
+  "an_zoo_points_short": "प्राणी गुण",
+  "an_shop_rarity_line": "रेअ निवड - बाकी शिकारीत मिळतील!",
+  "an_shop_price_line": "किंमत (नाणी)"
 }

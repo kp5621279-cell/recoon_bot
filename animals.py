@@ -1,7 +1,11 @@
 import asyncio
+import io
 import json
+import os
+import re
 import secrets
 import time
+import urllib.request
 
 import discord
 from discord.ext import commands
@@ -105,6 +109,100 @@ def hunger_bar(hunger):
     return "❤️" * hunger + "🖤" * (5 - hunger)
 
 
+# ---------------- image card renderer (bade icons ke saath) ----------------
+
+_IMG_CACHE = {}
+_PER_ROW = 8
+_CELL = 98
+_ICON = 64
+
+
+def _emoji_urls(e: str):
+    """Custom Discord emoji -> CDN png/gif, unicode emoji -> twemoji png.
+    Candidate URLs list me return karo (pehla jo load ho jaye)."""
+    m = re.match(r"^<a?:\w+:(\d+)>$", e)
+    if m:
+        ext = "gif" if e.startswith("<a:") else "png"
+        return [f"https://cdn.discordapp.com/emojis/{m.group(1)}.{ext}?size=128"]
+    cps = [f"{ord(c):x}" for c in e]
+    base = f"https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/72x72"
+    urls = [base + "/" + "-".join(cps) + ".png"]
+    if "fe0f" in cps:  # variation selector wale emoji bina fe0f bhi hote hain
+        urls.insert(0, base + "/" + "-".join(c for c in cps if c != "fe0f") + ".png")
+    return urls
+
+
+def _load_img(url: str):
+    """URL se image (cache ke saath). Gif ka pehla frame. None = fail."""
+    if url in _IMG_CACHE:
+        return _IMG_CACHE[url]
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            raw = r.read()
+        from PIL import Image
+        img = Image.open(io.BytesIO(raw)).convert("RGBA")
+        _IMG_CACHE[url] = img
+        return img
+    except Exception:
+        return None
+
+
+def render_collection_card(title: str, sections: list, footer: str = ""):
+    """Dark card: bade emoji icons grid + counts. sections = [{label, cells}].
+    cell = {emoji, count, star}. BytesIO(png) return karta hai."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    def _font(size, bold=False):
+        name = "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"
+        return ImageFont.truetype(os.path.join(os.path.dirname(__file__), "fonts", name), size)
+
+    secs = [s for s in sections if s["cells"]]
+    H = 96
+    for s in secs:
+        rows = (len(s["cells"]) + _PER_ROW - 1) // _PER_ROW
+        H += 40 + rows * _CELL + 6
+    H += 56 if footer else 24
+
+    card = Image.new("RGBA", (880, H), (32, 34, 39, 255))
+    d = ImageDraw.Draw(card)
+    d.rounded_rectangle([0, 0, 879, H - 1], radius=18, outline=(70, 75, 85, 255), width=2)
+    d.text((30, 22), title, font=_font(32, True), fill=(255, 255, 255))
+
+    y = 92
+    for s in secs:
+        d.text((30, y), s["label"], font=_font(20, True), fill=(158, 166, 180))
+        y += 36
+        rows = (len(s["cells"]) + _PER_ROW - 1) // _PER_ROW
+        for i, cell in enumerate(s["cells"]):
+            col, row = i % _PER_ROW, i // _PER_ROW
+            x = 30 + col * _CELL
+            cy = y + row * _CELL
+            img = None
+            for u in _emoji_urls(cell["emoji"]):
+                img = _load_img(u)
+                if img:
+                    break
+            if img:
+                card.alpha_composite(img.resize((_ICON, _ICON)), (x + 8, cy + 2))
+            cnt = cell.get("count")
+            if cnt:
+                w = d.textlength(cnt, font=_font(20, True))
+                d.text((x + (_CELL - 20 - w) / 2, cy + _ICON - 6), cnt,
+                       font=_font(20, True), fill=(255, 209, 84))
+            if cell.get("star"):
+                d.text((x + 4, cy - 4), "★", font=_font(22, True), fill=(255, 209, 84))
+        y += rows * _CELL + 6
+
+    if footer:
+        d.text((30, y + 4), footer, font=_font(20), fill=(148, 155, 168))
+
+    buf = io.BytesIO()
+    card.convert("RGB").save(buf, "PNG")
+    buf.seek(0)
+    return buf
+
+
 def animal_name(animal):
     return animal["nickname"] or animal["species"]["name"]
 
@@ -197,13 +295,14 @@ class Animals(commands.Cog):
 
     @commands.command(name="zoo", aliases=["animals", "collection", "inv", "inventory", "bag"])
     async def zoo(self, ctx: commands.Context, member: discord.Member = None):
-        """Apna (ya kisi aur ka) zoo + inventory ek compact card me dekho."""
+        """Apna (ya kisi aur ka) zoo + inventory ek image card me dekho."""
         member = member or ctx.author
         lang = await database.get_lang(ctx.author.id)
         animals = await database.get_user_animals(member.id)
         active = await database.get_active_animal(member.id)
 
-        # ---- emoji grid: species-wise counts (OwO style) ----
+        # ---- grid cells: species-wise counts ----
+        cells = []
         if animals:
             seen = {}
             for a in animals:
@@ -212,14 +311,8 @@ class Animals(commands.Cog):
                 ent["n"] += 1
                 if active and a["id"] == active["id"]:
                     ent["star"] = True
-            cells = [e["emoji"] + (str(e["n"]) if e["n"] > 1 else "") + ("⭐" if e["star"] else "")
-                     for e in seen.values()]
-            rows = [" ".join(cells[i:i + 8]) for i in range(0, len(cells), 8)]
-            if len(rows) > 12:
-                rows = rows[:12] + ["…"]
-            grid = "\n".join(rows)
-        else:
-            grid = i18n.t(lang, "an_empty", prefix=ctx.clean_prefix, mention=member.mention)
+            cells = [{"emoji": e["emoji"], "count": str(e["n"]) if e["n"] > 1 else "",
+                      "star": e["star"]} for e in seen.values()]
 
         # ---- rarity summary + zoo points ----
         counts = {}
@@ -234,34 +327,28 @@ class Animals(commands.Cog):
 
         # ---- inventory sections (category-wise) ----
         items = await database.inv_all(member.id)
-        food_parts = [f"{FOODS[iid]['emoji']}{qty}" for itype, iid, qty in items
-                      if itype == "food" and iid in FOODS]
-        shard_parts = [f"{SHARD_ICON}×{qty}" for itype, iid, qty in items
-                       if itype == "shard" and iid == "fuzon"]
-        abil_parts = [f"{ABILITIES[iid]['emoji']}{qty}" for itype, iid, qty in items
-                      if itype == "ability" and iid in ABILITIES]
-        inv_lines = []
-        if food_parts:
-            inv_lines.append(i18n.t(lang, "an_inv_food") + ": " + " • ".join(food_parts))
-        if shard_parts:
-            inv_lines.append(i18n.t(lang, "an_inv_shards") + ": " + " • ".join(shard_parts))
-        if abil_parts:
-            inv_lines.append(i18n.t(lang, "an_inv_abilities") + ": " + " • ".join(abil_parts))
+        food_cells = [{"emoji": FOODS[iid]["emoji"], "count": str(qty), "star": False}
+                      for itype, iid, qty in items if itype == "food" and iid in FOODS]
+        shard_cells = [{"emoji": SHARD_ICON, "count": str(qty), "star": False}
+                       for itype, iid, qty in items if itype == "shard" and iid == "fuzon"]
+        abil_cells = [{"emoji": ABILITIES[iid]["emoji"], "count": str(qty), "star": False}
+                      for itype, iid, qty in items if itype == "ability" and iid in ABILITIES]
 
-        desc = (grid + "\n\n" + i18n.t(lang, "an_zoo_points", points=f"{points:,}")
-                + "\n" + rarity_line)
-        if inv_lines:
-            desc += "\n\n" + "\n".join(inv_lines)
+        sections = [{"label": i18n.t(lang, "an_zoo_animals"), "cells": cells}]
+        if food_cells:
+            sections.append({"label": i18n.t(lang, "an_inv_food"), "cells": food_cells})
+        if shard_cells:
+            sections.append({"label": i18n.t(lang, "an_inv_shards"), "cells": shard_cells})
+        if abil_cells:
+            sections.append({"label": i18n.t(lang, "an_inv_abilities"), "cells": abil_cells})
 
-        embed = discord.Embed(
-            title=i18n.t(lang, "an_zoo_title", user=member.display_name),
-            description=desc,
-            color=discord.Color.green(),
+        footer = f"🏅 {i18n.t(lang, 'an_zoo_points_short')}: {points:,}  |  {rarity_line}  |  " \
+                 + i18n.t(lang, "an_zoo_footer", n=len(animals), prefix=ctx.clean_prefix)
+        buf = render_collection_card(
+            i18n.t(lang, "an_zoo_title", user=member.display_name),
+            sections, footer,
         )
-        embed.set_thumbnail(url=BANNER_URL)
-        embed.set_footer(text=i18n.t(lang, "an_zoo_footer", n=len(animals),
-                                     prefix=ctx.clean_prefix))
-        await ctx.send(embed=embed)
+        await ctx.send(file=discord.File(buf, "zoo.png"))
 
     @commands.command(name="hunt")
     async def hunt(self, ctx: commands.Context):
@@ -756,7 +843,8 @@ async def handle_buy(ctx, lang: str, kind: str, ref):
         await database.update_coins(ctx.author.id, -f["price"])
         await database.inv_add(ctx.author.id, "food", food, 1)
         return await ctx.send(i18n.t(lang, "an_buy_food_done", emoji=f["emoji"], name=f["name"],
-                                     price=f["price"], coin=COIN, mention=ctx.author.mention))
+                                     price=f["price"], coin=COIN, prefix=ctx.clean_prefix,
+                                     mention=ctx.author.mention))
 
     if kind == "ability":
         ab_id = (str(ref) or "").lower() if ref else ""
@@ -771,7 +859,7 @@ async def handle_buy(ctx, lang: str, kind: str, ref):
         await database.inv_add(ctx.author.id, "ability", ab_id, 1)
         return await ctx.send(i18n.t(lang, "an_buy_ability_done", emoji=ab["emoji"],
                                      name=ab["name"], price=ab["price"], coin=COIN,
-                                     mention=ctx.author.mention))
+                                     prefix=ctx.clean_prefix, mention=ctx.author.mention))
 
 
 async def setup(bot):
