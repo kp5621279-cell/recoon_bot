@@ -1,0 +1,397 @@
+import discord
+from discord.ext import commands
+import secrets
+
+import database
+
+BANNER_URL = "https://cdn.discordapp.com/emojis/1550526211388612608.png?size=512"
+COIN = "<:coin:1550545065397584066>"
+
+MINES_ACTIVE = {}  # user_id -> MinesGame (ek user ka ek hi chalu game)
+GAME_TIMEOUT = 600  # 10 min me game apne aap settle ho jata hai
+
+LETTERS = "ABCDEFGHI"
+
+
+def fair_multiplier(total: int, bombs: int, picks: int) -> float:
+    """Stake-style fair mines multiplier (1% house edge).
+
+    Har safe pick ke baad: 0.99 * C(total, picks) / C(total - bombs, picks).
+    """
+    gems = total - bombs
+    mult = 1.0
+    for i in range(picks):
+        mult *= (total - i) / (gems - i)
+    return round(0.99 * mult, 2)
+
+
+def parse_spec(spec: str):
+    """`!mine <bet> <spec>` ka spec parse karo -> (size, bombs, label) ya None.
+
+    - 3 / easy / e  -> 3x3 board, 3 bombs
+    - 9 / big / b   -> 9x9 board, 9 bombs (bada board = chhote multipliers)
+    - 1-24          -> 5x5 board, itne bombs (apne hisab se)
+    """
+    if spec is None:
+        return (5, 5, "Custom 5x5 - 5 bombs")
+    s = spec.strip().lower()
+    if s in ("3", "easy", "e"):
+        return (3, 3, "Easy 3x3 - 3 bombs")
+    if s in ("9", "big", "b"):
+        return (9, 9, "Big 9x9 - 9 bombs")
+    if s.isdigit():
+        n = int(s)
+        if 1 <= n <= 24:
+            return (5, n, f"Custom 5x5 - {n} bombs")
+    return None
+
+
+class MinesGame:
+    """Ek chalu mines game ka pure logic - discord layer ise render karta hai."""
+
+    def __init__(self, player_id: int, bet: int, size: int, bombs: int, label: str):
+        self.player_id = player_id
+        self.bet = bet
+        self.size = size
+        self.total = size * size
+        self.bombs = bombs
+        self.gems = self.total - bombs
+        self.label = label
+        self.bomb_set = set(secrets.SystemRandom().sample(range(self.total), bombs))
+        self.revealed = set()
+        self.hit = None          # jis tile par bomb phata
+        self.over = False
+        self.message = None      # board message
+        self.control = None      # control message (9x9 me same hota hai)
+        self.view = None
+        self.control_view = None
+
+    @property
+    def picks(self) -> int:
+        return len(self.revealed)
+
+    def multiplier(self) -> float:
+        return fair_multiplier(self.total, self.bombs, self.picks)
+
+    def cashout_amount(self) -> int:
+        return int(self.bet * self.multiplier())
+
+    def open_tile(self, idx: int) -> str:
+        """Tile kholo (pure logic). Returns: 'bomb' | 'gem' | 'autowin'."""
+        if self.over or idx in self.revealed:
+            return "gone"
+        if idx in self.bomb_set:
+            self.hit = idx
+            self.over = True
+            return "bomb"
+        self.revealed.add(idx)
+        if len(self.revealed) == self.gems:
+            self.over = True
+            return "autowin"
+        return "gem"
+
+    def cleanup(self):
+        MINES_ACTIVE.pop(self.player_id, None)
+
+    # ------------------- rendering helpers -------------------
+
+    def control_embed(self, note: str = None) -> discord.Embed:
+        mult = self.multiplier()
+        cash = self.cashout_amount()
+        desc = note or (
+            f"💎 par click karo - har diamond se multiplier badhega.\n"
+            f"💣 par click hua to pura bet gaya!"
+        )
+        embed = discord.Embed(
+            title=f"💣 Mines — {self.label}",
+            description=desc,
+            color=discord.Color.gold() if self.over else discord.Color.blurple(),
+        )
+        embed.set_thumbnail(url=BANNER_URL)
+        embed.add_field(name="Bet", value=f"{self.bet} {COIN}")
+        embed.add_field(name="Multiplier", value=f"**{mult:.2f}x**")
+        embed.add_field(
+            name="Cash Out",
+            value=f"**{cash}** {COIN}" if self.picks > 0 else "— koi diamond nahi khola —",
+        )
+        embed.add_field(name="Tiles", value=f"💎 {self.gems - self.picks} bache | 💣 {self.bombs}", inline=False)
+        embed.set_footer(text="Cash Out dabao kabhi bhi - warna bomb ka intezaar karo 😈")
+        return embed
+
+    def big_board_text(self) -> str:
+        """9x9 board emoji-grid ke roop me."""
+        rows = []
+        for r in range(self.size):
+            cells = []
+            for c in range(self.size):
+                i = r * self.size + c
+                if i in self.revealed:
+                    cells.append("💎")
+                elif self.over and i in self.bomb_set:
+                    cells.append("💥" if i == self.hit else "💣")
+                elif self.over:
+                    cells.append("💎" if i not in self.bomb_set else "💣")
+                else:
+                    cells.append("⬜")
+            rows.append(f"{LETTERS[r]} " + " ".join(cells))
+        header = "  " + "".join(f"{n}\u20e3" for n in range(1, self.size + 1))
+        return header + "\n" + "\n".join(rows)
+
+    def big_embed(self, note: str = None) -> discord.Embed:
+        embed = self.control_embed(note)
+        embed.description = f"{self.big_board_text()}\n\n{embed.description or ''}".strip()
+        return embed
+
+    # ------------------- discord flow -------------------
+
+    async def start(self, ctx: commands.Context):
+        if self.size <= 5:
+            self.view = BoardView(self)
+            self.message = await ctx.send(
+                content=f"💣 **Mines** — {self.label} | Bet: {self.bet} {COIN}",
+                view=self.view,
+            )
+            self.control_view = ControlView(self)
+            self.control = await ctx.send(embed=self.control_embed(), view=self.control_view)
+        else:
+            self.view = BigBoardView(self)
+            self.message = await ctx.send(embed=self.big_embed(), view=self.view)
+            self.control = self.message
+            self.control_view = self.view
+
+    def _disable_all(self):
+        if self.view:
+            for child in self.view.children:
+                child.disabled = True
+        if self.control_view:
+            for child in self.control_view.children:
+                child.disabled = True
+
+    def _reveal_bombs_on_buttons(self):
+        if not isinstance(self.view, BoardView):
+            return
+        for i, btn in enumerate(self.view.tiles):
+            if i in self.bomb_set:
+                btn.style = discord.ButtonStyle.danger
+                btn.label = "💥" if i == self.hit else "💣"
+                btn.disabled = True
+
+    async def _end_edits(self, interaction: discord.Interaction, note: str):
+        """Game khatam - dono messages update karo aur state saaf karo."""
+        self._disable_all()
+        self._reveal_bombs_on_buttons()
+        try:
+            if isinstance(self.view, BoardView):
+                await interaction.response.edit_message(view=self.view)
+                await self.control.edit(embed=self.control_embed(note), view=self.control_view)
+            else:
+                await interaction.response.edit_message(embed=self.big_embed(note), view=self.view)
+        except discord.HTTPException:
+            pass
+        self.cleanup()
+
+    async def pick(self, interaction: discord.Interaction, idx: int, btn: discord.ui.Button = None):
+        if interaction.user.id != self.player_id:
+            return await interaction.response.send_message("❌ Ye game tumhara nahi hai!", ephemeral=True)
+        if self.over:
+            return await interaction.response.send_message("❌ Game khatam ho chuka hai.", ephemeral=True)
+
+        result = self.open_tile(idx)
+        if result == "gone":
+            return await interaction.response.send_message("❌ Ye tile already khul chuka hai.", ephemeral=True)
+
+        if result == "bomb":
+            note = f"💥 **Bomb phat gaya!** Tumhara **{self.bet}** {COIN} gaya. 🪦"
+            return await self._end_edits(interaction, note)
+
+        if result == "autowin":
+            amount = self.cashout_amount()
+            await database.update_coins(self.player_id, amount)
+            note = f"🏆 **Pura board clear!** Har diamond mil gaya — **{amount}** {COIN} mile!"
+            return await self._end_edits(interaction, note)
+
+        # safe pick: button ko gem bana do
+        if btn is not None:
+            btn.style = discord.ButtonStyle.success
+            btn.label = "💎"
+            btn.disabled = True
+        try:
+            if isinstance(self.view, BoardView):
+                await interaction.response.edit_message(view=self.view)
+                await self.control.edit(embed=self.control_embed())
+            else:
+                await interaction.response.edit_message(embed=self.big_embed())
+        except discord.HTTPException:
+            pass
+
+    async def cashout(self, interaction: discord.Interaction):
+        if interaction.user.id != self.player_id:
+            return await interaction.response.send_message("❌ Ye game tumhara nahi hai!", ephemeral=True)
+        if self.over:
+            return await interaction.response.send_message("❌ Game khatam ho chuka hai.", ephemeral=True)
+
+        if self.picks == 0:
+            # kuch khola hi nahi - bet wapas
+            self.over = True
+            await database.update_coins(self.player_id, self.bet)
+            return await self._end_edits(interaction, f"↩️ Koi diamond nahi khola — bet **{self.bet}** {COIN} wapas.")
+
+        self.over = True
+        amount = self.cashout_amount()
+        await database.update_coins(self.player_id, amount)
+        note = f"💰 **Cash Out!** {self.picks} diamond khule — **{amount}** {COIN} mile! ({self.multiplier():.2f}x)"
+        await self._end_edits(interaction, note)
+
+    async def finish_timeout(self):
+        """View timeout - chalu game ko auto-settle karo (fair: khela hua to cashout)."""
+        if self.over:
+            return
+        self.over = True
+        if self.picks == 0:
+            await database.update_coins(self.player_id, self.bet)
+            note = f"⌛ Time khatam — koi pick nahi tha, bet **{self.bet}** {COIN} wapas."
+        else:
+            amount = self.cashout_amount()
+            await database.update_coins(self.player_id, amount)
+            note = f"⌛ Time khatam — auto cash out: **{amount}** {COIN} ({self.multiplier():.2f}x)."
+        self._disable_all()
+        self._reveal_bombs_on_buttons()
+        try:
+            if isinstance(self.view, BoardView):
+                await self.message.edit(view=self.view)
+                await self.control.edit(embed=self.control_embed(note), view=self.control_view)
+            else:
+                await self.message.edit(embed=self.big_embed(note), view=self.view)
+        except discord.HTTPException:
+            pass
+        self.cleanup()
+
+
+class BoardView(discord.ui.View):
+    """3x3 / 5x5 boards: har tile ek button."""
+
+    def __init__(self, game: MinesGame):
+        super().__init__(timeout=GAME_TIMEOUT)
+        self.game = game
+        self.tiles = []
+        for i in range(game.total):
+            btn = discord.ui.Button(
+                style=discord.ButtonStyle.secondary,
+                label="\u200b",
+                row=i // game.size,
+            )
+            btn.callback = self._make_cb(i, btn)
+            self.add_item(btn)
+            self.tiles.append(btn)
+
+    def _make_cb(self, idx: int, btn: discord.ui.Button):
+        async def cb(interaction: discord.Interaction):
+            await self.game.pick(interaction, idx, btn)
+        return cb
+
+    async def on_timeout(self):
+        await self.game.finish_timeout()
+
+
+class ControlView(discord.ui.View):
+    """Board message ke niche cash-out panel."""
+
+    def __init__(self, game: MinesGame):
+        super().__init__(timeout=GAME_TIMEOUT)
+        self.game = game
+
+    @discord.ui.button(label="💰 Cash Out", style=discord.ButtonStyle.success)
+    async def cashout_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.game.cashout(interaction)
+
+    async def on_timeout(self):
+        await self.game.finish_timeout()
+
+
+class BigBoardView(discord.ui.View):
+    """9x9: Discord me 81 buttons fit nahi hote - tile modal se khologe."""
+
+    def __init__(self, game: MinesGame):
+        super().__init__(timeout=GAME_TIMEOUT)
+        self.game = game
+
+    @discord.ui.button(label="🔷 Tile kholo", style=discord.ButtonStyle.primary)
+    async def pick_tile(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(PickTileModal(self.game))
+
+    @discord.ui.button(label="💰 Cash Out", style=discord.ButtonStyle.success)
+    async def cashout_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.game.cashout(interaction)
+
+    async def on_timeout(self):
+        await self.game.finish_timeout()
+
+
+class PickTileModal(discord.ui.Modal):
+    def __init__(self, game: MinesGame):
+        super().__init__(title="Tile chuno — jaise B4", timeout=120)
+        self.game = game
+        self.tile = discord.ui.TextInput(
+            label="Row (A-I) + Column (1-9)",
+            placeholder="B4",
+            min_length=2,
+            max_length=2,
+            required=True,
+        )
+        self.add_item(self.tile)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        game = self.game
+        if game.over:
+            return await interaction.response.send_message("❌ Game khatam ho chuka hai.", ephemeral=True)
+        raw = self.tile.value.strip().upper().replace(" ", "")
+        r, c = raw[0], raw[1:]
+        if r not in LETTERS[: game.size] or not c.isdigit() or not (1 <= int(c) <= game.size):
+            return await interaction.response.send_message(
+                f"❌ Galat tile! Format: Row {LETTERS[: game.size]} + Column 1-{game.size}, jaise `B4`.",
+                ephemeral=True,
+            )
+        idx = LETTERS.index(r) * game.size + (int(c) - 1)
+        await game.pick(interaction, idx)
+
+
+class Mines(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.command(name="mine", aliases=["mines"])
+    async def mine(self, ctx: commands.Context, bet: int, spec: str = None):
+        """💣 Mines - diamonds kholo, bomb se bacho!
+
+        Usage:
+          !mine 500 3      -> Easy 3x3 (3 bombs)
+          !mine 500 9      -> Big 9x9 (9 bombs, chhote multipliers)
+          !mine 500 5      -> Custom 5x5 (5 bombs, apne hisab se)
+        """
+        if ctx.author.id in MINES_ACTIVE:
+            return await ctx.send("❌ Pehle apna chalu game khatam karo! (Board par khelo ya Cash Out karo)")
+        if bet <= 0:
+            return await ctx.send("❌ Bet 0 se bada hona chahiye.")
+
+        parsed = parse_spec(spec)
+        if parsed is None:
+            return await ctx.send(
+                "❌ Galat mode! Options:\n"
+                "`!mine <bet> 3` — Easy 3x3, 3 bombs\n"
+                "`!mine <bet> 9` — Big 9x9, 9 bombs (chhote multipliers)\n"
+                "`!mine <bet> <1-24>` — Custom 5x5, apne bombs"
+            )
+
+        user = await database.get_user(ctx.author.id)
+        if not user or user["coins"] < bet:
+            return await ctx.send(f"❌ Tumhare paas itne {COIN} nahi hain! Balance: `{user['coins'] if user else 0}`")
+
+        size, bombs, label = parsed
+        game = MinesGame(ctx.author.id, bet, size, bombs, label)
+        MINES_ACTIVE[ctx.author.id] = game
+        await database.update_coins(ctx.author.id, -bet)
+        await game.start(ctx)
+
+
+async def setup(bot):
+    await bot.add_cog(Mines(bot))

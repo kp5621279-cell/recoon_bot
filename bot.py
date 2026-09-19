@@ -48,7 +48,7 @@ class CustomHelpCommand(commands.HelpCommand):
         
         for command in await self.filter_commands(self.context.bot.commands, sort=True):
             cmd_info = f"**{self.context.clean_prefix}{command.name}** - {command.short_doc}"
-            if command.name in ["coin", "aviator"]:
+            if command.name in ["coin", "aviator", "mine"]:
                 games_cmds.append(cmd_info)
             elif command.name in ["bal", "daily", "req", "pay"]:
                 econ_cmds.append(cmd_info)
@@ -98,6 +98,7 @@ class MyBot(commands.Bot):
     async def setup_hook(self):
         await self.load_extension("music")
         await self.load_extension("aviator")
+        await self.load_extension("mines")
 
 bot = MyBot(
     command_prefix=get_dynamic_prefix,
