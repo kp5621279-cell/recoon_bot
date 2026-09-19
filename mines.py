@@ -28,21 +28,19 @@ def fair_multiplier(total: int, bombs: int, picks: int) -> float:
 def parse_spec(spec: str):
     """`!mine <bet> <spec>` ka spec parse karo -> (size, bombs, label) ya None.
 
-    - 3 / easy / e  -> 3x3 board, 3 bombs
-    - 9 / big / b   -> 9x9 board, 9 bombs (bada board = chhote multipliers)
-    - 1-24          -> 5x5 board, itne bombs (apne hisab se)
+    - small / s / 3      -> 3x3 board, 3 bombs
+    - bigt / t / 5       -> 5x5 board, 5 bombs
+    - bigl / l / 9       -> 9x9 board, 9 bombs (sabse bada board = chhote multipliers)
     """
     if spec is None:
-        return (5, 5, "Custom 5x5 - 5 bombs")
+        return (5, 5, "Bigt 5x5 - 5 bombs")
     s = spec.strip().lower()
-    if s in ("3", "easy", "e"):
-        return (3, 3, "Easy 3x3 - 3 bombs")
-    if s in ("9", "big", "b"):
-        return (9, 9, "Big 9x9 - 9 bombs")
-    if s.isdigit():
-        n = int(s)
-        if 1 <= n <= 24:
-            return (5, n, f"Custom 5x5 - {n} bombs")
+    if s in ("small", "s", "3"):
+        return (3, 3, "Small 3x3 - 3 bombs")
+    if s in ("bigt", "t", "5"):
+        return (5, 5, "Bigt 5x5 - 5 bombs")
+    if s in ("bigl", "l", "9"):
+        return (9, 9, "Bigl 9x9 - 9 bombs")
     return None
 
 
@@ -364,9 +362,9 @@ class Mines(commands.Cog):
         """💣 Mines - diamonds kholo, bomb se bacho!
 
         Usage:
-          !mine 500 3      -> Easy 3x3 (3 bombs)
-          !mine 500 9      -> Big 9x9 (9 bombs, chhote multipliers)
-          !mine 500 5      -> Custom 5x5 (5 bombs, apne hisab se)
+          !mine 500 small   -> 3x3 (3 bombs)
+          !mine 500 bigt    -> 5x5 (5 bombs)
+          !mine 500 bigl    -> 9x9 (9 bombs, chhote multipliers)
         """
         if ctx.author.id in MINES_ACTIVE:
             return await ctx.send("❌ Pehle apna chalu game khatam karo! (Board par khelo ya Cash Out karo)")
@@ -377,9 +375,9 @@ class Mines(commands.Cog):
         if parsed is None:
             return await ctx.send(
                 "❌ Galat mode! Options:\n"
-                "`!mine <bet> 3` — Easy 3x3, 3 bombs\n"
-                "`!mine <bet> 9` — Big 9x9, 9 bombs (chhote multipliers)\n"
-                "`!mine <bet> <1-24>` — Custom 5x5, apne bombs"
+                "`!mine <bet> small` — 3x3, 3 bombs\n"
+                "`!mine <bet> bigt` — 5x5, 5 bombs\n"
+                "`!mine <bet> bigl` — 9x9, 9 bombs (chhote multipliers)"
             )
 
         user = await database.get_user(ctx.author.id)
