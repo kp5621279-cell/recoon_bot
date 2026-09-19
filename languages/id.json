@@ -25,5 +25,17 @@
   "banned": "⛔ Kamu **dibanned** dari bot ini. Hubungi pemilik.",
   "need_vc": "❌ Kamu harus join Voice Channel dulu!",
   "welcome_daily": "🎁 Yeay! Kamu mendapat **{amount}** {coin} gratis. Saldo baru: **{balance}**.",
-  "daily_wait": "⏳ Hadiah harian sudah diklaim. Tunggu **{time}** lagi."
+  "daily_wait": "⏳ Hadiah harian sudah diklaim. Tunggu **{time}** lagi.",
+  "coin_bet_invalid": "❌ Taruhan harus lebih dari 0.",
+  "coin_not_enough": "❌ {coin} kamu tidak cukup! Saldo: {balance}",
+  "coin_invalid_choice": "❌ Pilihan tidak valid. Pilih `h` ( gamenesshead) atau `t` (tail).",
+  "coin_no_side": "🎲 Kamu tidak memilih sisi, jadi taruhanmu pada **{side}**.",
+  "coin_flipping": "{animation} Melempar koin...",
+  "coin_win": "{win_anim} Koin jatuh di **{side}**!\n✅ Kamu menang **{amount}** {coin}! Saldo baru: **{balance}**",
+  "coin_lose": "😢 Koin jatuh di **{side}**.\n❌ Kamu kalah **{amount}** {coin}. Saldo baru: **{balance}**",
+  "amount_invalid": "❌ Jumlah harus lebih dari 0.",
+  "no_bot_target": "❌ Tidak bisa dengan bot.",
+  "no_self_target": "❌ Tidak bisa dengan dirimu sendiri.",
+  "pay_sent": "💸 **{sender}** mengirim **{amount}** {coin} ke **{receiver}**.",
+  "req_sent": "📨 Permintaan dikirim ke **{receiver}** untuk **{amount}** {coin} - mereka bisa menyetujui/menolak di DM."
 }

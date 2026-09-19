@@ -25,5 +25,17 @@
   "banned": "⛔ 你已被此机器人**封禁**。请联系所有者。",
   "need_vc": "❌ 你需要先加入语音频道！",
   "welcome_daily": "🎁 太好了！你获得了 **{amount}** 免费 {coin}。新余额：**{balance}**。",
-  "daily_wait": "⏳ 你已经领取了每日奖励。请等待 **{time}**。"
+  "daily_wait": "⏳ 你已经领取了每日奖励。请等待 **{time}**。",
+  "coin_bet_invalid": "❌ 下注必须大于 0。",
+  "coin_not_enough": "❌ 你的 {coin} 不够！余额：{balance}",
+  "coin_invalid_choice": "❌ 无效选择。请选择 `h`（正面）或 `t`（反面）。",
+  "coin_no_side": "🎲 你没有选择，所以你押的是**{side}**。",
+  "coin_flipping": "{animation} 正在抛硬币...",
+  "coin_win": "{win_anim} 硬币落在**{side}**！\n✅ 你赢了 **{amount}** {coin}！新余额：**{balance}**",
+  "coin_lose": "😢 硬币落在**{side}**。\n❌ 你输了 **{amount}** {coin}。新余额：**{balance}**",
+  "amount_invalid": "❌ 金额必须大于 0。",
+  "no_bot_target": "❌ 不能对机器人这样做。",
+  "no_self_target": "❌ 不能对自己这样做。",
+  "pay_sent": "💸 **{sender}** 向 **{receiver}** 发送了 **{amount}** {coin}。",
+  "req_sent": "📨 已向 **{receiver}** 发送 **{amount}** {coin} 请求 - 他们可以在私信中批准或拒绝。"
 }

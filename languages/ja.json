@@ -25,5 +25,17 @@
   "banned": "⛔ あなたはこのボットから**BAN**されています。オーナーに連絡してください。",
   "need_vc": "❌ まずボイスチャンネルに参加してください！",
   "welcome_daily": "🎁 やった！**{amount}** {coin} の無料報酬を受け取りました。新しい残高：**{balance}**。",
-  "daily_wait": "⏳ デイリーボーナスは受取済みです。あと **{time}** お待ちください。"
+  "daily_wait": "⏳ デイリーボーナスは受取済みです。あと **{time}** お待ちください。",
+  "coin_bet_invalid": "❌ ベットは 0 より大きい必要があります。",
+  "coin_not_enough": "❌ {coin} が足りません！残高：{balance}",
+  "coin_invalid_choice": "❌ 無効な選択です。`h`（表）か `t`（裏）を選んでください。",
+  "coin_no_side": "🎲 選択しなかったため、**{side}** にベットします。",
+  "coin_flipping": "{animation} コインを投げています...",
+  "coin_win": "{win_anim} コインは **{side}** で止まりました！\n✅ **{amount}** {coin} 勝ちました！新しい残高：**{balance}**",
+  "coin_lose": "😢 コインは **{side}** で止まりました。\n❌ **{amount}** {coin} 負けました。新しい残高：**{balance}**",
+  "amount_invalid": "❌ 金額は 0 より大きい必要があります。",
+  "no_bot_target": "❌ ボットに対してはできません。",
+  "no_self_target": "❌ 自分に対してはできません。",
+  "pay_sent": "💸 **{sender}** が **{receiver}** に **{amount}** {coin} を送りました。",
+  "req_sent": "📨 **{receiver}** に **{amount}** {coin} のリクエストを送信しました - DMで承認/拒否できます。"
 }

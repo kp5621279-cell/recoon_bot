@@ -25,5 +25,17 @@
   "banned": "⛔ Tum is bot se **ban** ho. Owner se contact karo.",
   "need_vc": "❌ Pehle ek Voice Channel join karo!",
   "welcome_daily": "🎁 Yay! Tumhe **{amount}** free {coin} mile. Naya balance: **{balance}**.",
-  "daily_wait": "⏳ Daily reward already le liya. **{time}** wait karo dobara claim karne ke liye."
+  "daily_wait": "⏳ Daily reward already le liya. **{time}** wait karo dobara claim karne ke liye.",
+  "coin_bet_invalid": "❌ Bet 0 se bada hona chahiye.",
+  "coin_not_enough": "❌ Tumhare paas itne {coin} nahi hain! Balance: {balance}",
+  "coin_invalid_choice": "❌ Galat choice. `h` (heads) ya `t` (tails) chuno.",
+  "coin_no_side": "🎲 Tumne side nahi chuni, to tumhari bet **{side}** par hai.",
+  "coin_flipping": "{animation} Coin flip ho raha hai...",
+  "coin_win": "{win_anim} Coin pada **{side}** par!\n✅ Tum **{amount}** {coin} jeet gaye! Naya balance: **{balance}**",
+  "coin_lose": "😢 Coin pada **{side}** par.\n❌ Tum **{amount}** {coin} haar gaye. Naya balance: **{balance}**",
+  "amount_invalid": "❌ Amount 0 se bada hona chahiye.",
+  "no_bot_target": "❌ Bot ke saath ye nahi kar sakte.",
+  "no_self_target": "❌ Apne aap ke saath ye nahi kar sakte.",
+  "pay_sent": "💸 **{sender}** ne **{receiver}** ko **{amount}** {coin} bheje.",
+  "req_sent": "📨 **{receiver}** ko **{amount}** {coin} ki request bhej di - wo DMs me approve/decline kar sakta hai."
 }

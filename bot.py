@@ -600,13 +600,15 @@ async def coin_flip(ctx: commands.Context, bet: int, choice: str = None):
     Usage: <prefix>coin <bet_amount> [h/t]
     Example: !c 500 h
     """
+    lang = await database.get_lang(ctx.author.id)
+
     if bet <= 0:
-        await ctx.send("❌ Bet must be greater than 0.")
+        await ctx.send(i18n.t(lang, "coin_bet_invalid"))
         return
 
     user_data = await database.get_user(ctx.author.id)
     if not user_data or user_data["coins"] < bet:
-        await ctx.send(f"❌ You don't have enough {COIN}! Your balance: {user_data['coins'] if user_data else 0}")
+        await ctx.send(i18n.t(lang, "coin_not_enough", coin=COIN, balance=user_data['coins'] if user_data else 0))
         return
 
     # default random choice if user didn't pick
@@ -615,14 +617,14 @@ async def coin_flip(ctx: commands.Context, bet: int, choice: str = None):
     if choice:
         choice = choice.lower()
         if choice not in valid_choices:
-            await ctx.send("❌ Invalid choice. Please choose `h` for heads or `t` for tails.")
+            await ctx.send(i18n.t(lang, "coin_invalid_choice"))
             return
         user_choice_is_heads = choice in ["h", "head", "heads"]
     else:
         # If user didn't pick, randomly assign them one
         user_choice_is_heads = secrets.choice([True, False])
         side = "Heads" if user_choice_is_heads else "Tails"
-        await ctx.send(f"🎲 You didn't choose a side, so you are betting on **{side}**.")
+        await ctx.send(i18n.t(lang, "coin_no_side", side=side))
 
     # Deduct bet temporarily (if they lose, it's gone; if they win, we add 2x bet)
     await database.update_coins(ctx.author.id, -bet)
@@ -635,8 +637,9 @@ async def coin_flip(ctx: commands.Context, bet: int, choice: str = None):
     
     # The animation provided by user
     animation = "<a:pikuracoin20749_512:1550522369175593061>"
+    win_anim = "<a:grabill54congratulations13773_51:1550523083373416609>"
     
-    msg = await ctx.send(f"{animation} Flipping the coin...")
+    msg = await ctx.send(i18n.t(lang, "coin_flipping", animation=animation))
     
     import asyncio
     await asyncio.sleep(2.0) # simulate flip time
@@ -645,10 +648,10 @@ async def coin_flip(ctx: commands.Context, bet: int, choice: str = None):
         winnings = bet * 2
         await database.update_coins(ctx.author.id, winnings)
         new_balance = user_data['coins'] + bet
-        await msg.edit(content=f"<a:grabill54congratulations13773_51:1550523083373416609> The coin landed on **{result_side}**!\n✅ You won **{bet}** {COIN}! New balance: **{new_balance}**")
+        await msg.edit(content=i18n.t(lang, "coin_win", win_anim=win_anim, side=result_side, amount=bet, coin=COIN, balance=new_balance))
     else:
         new_balance = user_data['coins'] - bet
-        await msg.edit(content=f"😢 The coin landed on **{result_side}**.\n❌ You lost **{bet}** {COIN}. New balance: **{new_balance}**")
+        await msg.edit(content=i18n.t(lang, "coin_lose", side=result_side, amount=bet, coin=COIN, balance=new_balance))
 
 @bot.command(name="req", aliases=["request"])
 async def request_coins(ctx: commands.Context, amount: int, target: discord.Member):
@@ -657,13 +660,14 @@ async def request_coins(ctx: commands.Context, amount: int, target: discord.Memb
     Usage: <prefix>req <amount> @user
     Example: !req 1000 @friend
     """
+    lang = await database.get_lang(ctx.author.id)
     if amount <= 0:
-        return await ctx.send("❌ Amount must be greater than 0.")
+        return await ctx.send(i18n.t(lang, "amount_invalid"))
 
     if target.bot:
-        return await ctx.send(f"❌ You can't request {COIN} from a bot.")
+        return await ctx.send(i18n.t(lang, "no_bot_target"))
     if target.id == ctx.author.id:
-        return await ctx.send(f"❌ You can't request {COIN} from yourself.")
+        return await ctx.send(i18n.t(lang, "no_self_target"))
 
     target_data = await database.get_user(target.id)
     if not target_data or not target_data["agreed"]:
@@ -688,9 +692,10 @@ async def request_coins(ctx: commands.Context, amount: int, target: discord.Memb
         )
 
     PENDING_REQUESTS.add(key)
-    await ctx.send(
-        f"📨 Request sent to **{target.display_name}** for **{amount}** {COIN} - they can approve or decline in their DMs."
-    )
+    await ctx.send(i18n.t(
+        await database.get_lang(ctx.author.id), "req_sent",
+        receiver=target.display_name, amount=amount, coin=COIN,
+    ))
 
 
 @bot.command(name="pay", aliases=["send", "give"])
@@ -700,13 +705,14 @@ async def pay_coins(ctx: commands.Context, amount: int, target: discord.Member):
     Usage: <prefix>pay <amount> @user
     Example: !pay 500 @friend
     """
+    lang = await database.get_lang(ctx.author.id)
     if amount <= 0:
-        return await ctx.send("❌ Amount must be greater than 0.")
+        return await ctx.send(i18n.t(lang, "amount_invalid"))
 
     if target.bot:
-        return await ctx.send(f"❌ You can't send {COIN} to a bot.")
+        return await ctx.send(i18n.t(lang, "no_bot_target"))
     if target.id == ctx.author.id:
-        return await ctx.send(f"❌ You can't send {COIN} to yourself.")
+        return await ctx.send(i18n.t(lang, "no_self_target"))
 
     sender_data = await database.get_user(ctx.author.id)
     if not sender_data or sender_data["coins"] < amount:
@@ -723,7 +729,7 @@ async def pay_coins(ctx: commands.Context, amount: int, target: discord.Member):
 
     embed = discord.Embed(
         title=f"💸 {COIN} sent",
-        description=f"**{ctx.author.display_name}** sent **{amount}** {COIN} to **{target.display_name}**.",
+        description=i18n.t(lang, "pay_sent", sender=ctx.author.display_name, receiver=target.display_name, amount=amount, coin=COIN),
         color=discord.Color.green()
     )
     embed.add_field(name="Your balance", value=f"{sender_data['coins'] - amount} {COIN}", inline=True)

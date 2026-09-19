@@ -25,5 +25,17 @@
   "banned": "⛔ Vous êtes **banni** de ce bot. Contactez le propriétaire.",
   "need_vc": "❌ Rejoignez d'abord un salon vocal !",
   "welcome_daily": "🎁 Bravo ! Vous recevez **{amount}** {coin} gratuits. Nouveau solde : **{balance}**.",
-  "daily_wait": "⏳ Récompense quotidienne déjà réclamée. Attendez **{time}**."
+  "daily_wait": "⏳ Récompense quotidienne déjà réclamée. Attendez **{time}**.",
+  "coin_bet_invalid": "❌ La mise doit être supérieure à 0.",
+  "coin_not_enough": "❌ Vous n'avez pas assez de {coin} ! Solde : {balance}",
+  "coin_invalid_choice": "❌ Choix invalide. Choisissez `h` (face) ou `t` (pile).",
+  "coin_no_side": "🎲 Vous n'avez pas choisi de côté, vous misez sur **{side}**.",
+  "coin_flipping": "{animation} La pièce tourne...",
+  "coin_win": "{win_anim} La pièce est tombée sur **{side}** !\n✅ Vous avez gagné **{amount}** {coin} ! Nouveau solde : **{balance}**",
+  "coin_lose": "😢 La pièce est tombée sur **{side}**.\n❌ Vous avez perdu **{amount}** {coin}. Nouveau solde : **{balance}**",
+  "amount_invalid": "❌ Le montant doit être supérieur à 0.",
+  "no_bot_target": "❌ Impossible avec un bot.",
+  "no_self_target": "❌ Impossible avec vous-même.",
+  "pay_sent": "💸 **{sender}** a envoyé **{amount}** {coin} à **{receiver}**.",
+  "req_sent": "📨 Demande envoyée à **{receiver}** pour **{amount}** {coin} - il peut approuver ou refuser en DM."
 }
