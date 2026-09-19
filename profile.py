@@ -397,15 +397,19 @@ class ShopView(discord.ui.View):
         section = select.values[0]
         for opt in self.shop_select.options:
             opt.default = (opt.value == section)
-        embed, file = await self.cog.shop_payload(self.ctx, self.lang, section)
+        # Icon downloads block kar sakte hain - pehle ACK, phir edit
+        await interaction.response.defer()
         try:
+            embed, file = await self.cog.shop_payload(self.ctx, self.lang, section)
             if file:
-                await interaction.response.edit_message(embed=embed, view=self,
-                                                        files=[file], attachments=[])
+                await interaction.followup.edit_message(
+                    interaction.message.id, embed=embed, view=self,
+                    files=[file], attachments=[])
             else:
-                await interaction.response.edit_message(embed=embed, view=self, attachments=[])
+                await interaction.followup.edit_message(
+                    interaction.message.id, embed=embed, view=self, attachments=[])
         except discord.HTTPException:
-            await interaction.response.edit_message(embed=embed, view=self)
+            pass
 
     async def on_timeout(self):
         try:
@@ -504,7 +508,8 @@ class Profile(commands.Cog):
             section = "abilities"
         if section not in ("banners", "animals", "food", "abilities"):
             section = "banners"
-        embed, file = await self.shop_payload(ctx, lang, section)
+        from animals import render_collection_card_async
+        embed, file = await self.shop_payload(ctx, lang, section, render_collection_card_async)
         view = ShopView(ctx, lang, self, section)
         if file:
             msg = await ctx.send(file=file, embed=embed, view=view)
@@ -512,15 +517,20 @@ class Profile(commands.Cog):
             msg = await ctx.send(embed=embed, view=view)
         view.message = msg
 
-    async def shop_payload(self, ctx, lang, section: str):
-        """(embed, file|None) - animals/food/abilities image card ke saath (bade icons)."""
-        from animals import FOODS, ABILITIES, render_collection_card
+    async def shop_payload(self, ctx, lang, section: str, render_fn=None):
+        """(embed, file|None) - animals/food/abilities image card ke saath (bade icons).
+        render_fn async ho sakta hai (thread me chalta hai) - loop block na ho."""
+        from animals import FOODS, ABILITIES
+        if render_fn is None:
+            from animals import render_collection_card as render_fn_sync
+            async def render_fn(t, s, f):
+                return render_fn_sync(t, s, f)
         if section == "animals":
             species = [s for s in await database.get_all_species() if s["in_store"]]
             cells = [{"emoji": s["emoji"], "count": f"#{i}", "star": False}
                      for i, s in enumerate(species, 1)]
             title = i18n.t(lang, "an_shop_animals")
-            buf = render_collection_card(
+            buf = await render_fn(
                 title,
                 [{"label": i18n.t(lang, "an_shop_rarity_line"), "cells": cells}],
                 i18n.t(lang, "an_shop_buy", prefix=ctx.clean_prefix),
@@ -532,7 +542,7 @@ class Profile(commands.Cog):
             title = i18n.t(lang, "an_shop_food")
             cells = [{"emoji": f["emoji"], "count": str(f["price"]), "star": False}
                      for f in FOODS.values()]
-            buf = render_collection_card(
+            buf = await render_fn(
                 title,
                 [{"label": i18n.t(lang, "an_shop_price_line"), "cells": cells}],
                 i18n.t(lang, "an_shop_buy", prefix=ctx.clean_prefix),
@@ -544,7 +554,7 @@ class Profile(commands.Cog):
             title = i18n.t(lang, "an_shop_abilities")
             cells = [{"emoji": a["emoji"], "count": str(a["price"]), "star": False}
                      for a in ABILITIES.values()]
-            buf = render_collection_card(
+            buf = await render_fn(
                 title,
                 [{"label": i18n.t(lang, "an_shop_price_line"), "cells": cells}],
                 i18n.t(lang, "an_shop_buy", prefix=ctx.clean_prefix),

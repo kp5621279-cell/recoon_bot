@@ -133,7 +133,7 @@ def _emoji_urls(e: str):
 
 
 def _load_img(url: str):
-    """URL se image (cache ke saath). Gif ka pehla frame. None = fail."""
+    """URL se image (cache ke saath, fail bhi cache hoga). Gif = pehla frame."""
     if url in _IMG_CACHE:
         return _IMG_CACHE[url]
     try:
@@ -145,6 +145,7 @@ def _load_img(url: str):
         _IMG_CACHE[url] = img
         return img
     except Exception:
+        _IMG_CACHE[url] = None  # negative cache - har interaction par retry nahi
         return None
 
 
@@ -201,6 +202,12 @@ def render_collection_card(title: str, sections: list, footer: str = ""):
     card.convert("RGB").save(buf, "PNG")
     buf.seek(0)
     return buf
+
+
+async def render_collection_card_async(title: str, sections: list, footer: str = ""):
+    """render_collection_card ko thread me chalao - event loop block na ho
+    (downloads/PIL blocking hain, interaction 3s me respond karna hota hai)."""
+    return await asyncio.to_thread(render_collection_card, title, sections, footer)
 
 
 def animal_name(animal):
@@ -344,7 +351,7 @@ class Animals(commands.Cog):
 
         footer = f"🏅 {i18n.t(lang, 'an_zoo_points_short')}: {points:,}  |  {rarity_line}  |  " \
                  + i18n.t(lang, "an_zoo_footer", n=len(animals), prefix=ctx.clean_prefix)
-        buf = render_collection_card(
+        buf = await render_collection_card_async(
             i18n.t(lang, "an_zoo_title", user=member.display_name),
             sections, footer,
         )
