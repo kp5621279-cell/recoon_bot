@@ -301,6 +301,17 @@ async def on_command_error(ctx, error):
         await ctx.send(f"❌ Missing argument: {error.param.name}")
     elif isinstance(error, commands.BadArgument):
         await ctx.send("❌ Bad argument provided.")
+    elif isinstance(error, commands.CommandInvokeError) and isinstance(error.original, discord.Forbidden):
+        print(f"Missing permissions: {error.original}")
+        try:
+            await ctx.send(
+                "❌ Bot ke paas is kaam ke liye permission nahi hai!\n"
+                "**Server Settings → Roles** me bot ka role kholo aur ye ON karo: "
+                "Send Messages, Embed Links, Attach Files, Read Message History, "
+                "Connect + Speak (music ke liye)."
+            )
+        except discord.HTTPException:
+            pass  # channel me bolne ki bhi permission nahi - kuch aur nahi kar sakta
     else:
         print(f"Error: {error}")
         await ctx.send(f"❌ An error occurred: {error}")
