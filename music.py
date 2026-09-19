@@ -64,7 +64,17 @@ class YTDLSource(discord.PCMVolumeTransformer):
     async def from_query(cls, query, loop=None):
         loop = loop or asyncio.get_event_loop()
         # If it's a link, we process it. If it's text, we search.
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(query, download=False))
+        try:
+            data = await loop.run_in_executor(None, lambda: ytdl.extract_info(query, download=False))
+        except Exception as yt_err:
+            # YouTube ne block kiya? SoundCloud se dhoondo (JMusicBot-style multi-source fallback)
+            if "http" in query.lower():
+                raise yt_err  # direct link hai to fallback me kya hi karna
+            sc_data = await loop.run_in_executor(None, lambda: ytdl.extract_info(f"scsearch5:{query}", download=False))
+            entries = (sc_data or {}).get('entries') or []
+            if not entries:
+                raise yt_err  # SoundCloud par bhi nahi mila - original error dikhao
+            data = entries[0]
         
         if 'entries' in data:
             # take first item from a playlist or search results
@@ -275,12 +285,11 @@ class Music(commands.Cog):
             desc = f"Error playing song: `{str(e)}`"
             if "Sign in to confirm" in str(e) or "not a bot" in str(e):
                 desc = (
-                    "❌ YouTube ne bot-detect kar liya (server IP problem).\n\n"
-                    "**Fix:** YouTube cookies add karni hongi -\n"
+                    "❌ YouTube aur SoundCloud dono ne block kiya (server IP problem).\n\n"
+                    "**Permanent fix:** YouTube cookies add karo -\n"
                     "1. Browser me YouTube login karo (throwaway account best)\n"
                     "2. `cookies.txt` export karo (browser extension se)\n"
-                    "3. PowerShell me: `[Convert]::ToBase64String([IO.File]::ReadAllBytes(\"cookies.txt\")) | Set-Clipboard`\n"
-                    "4. Railway → Variables → `COOKIES_B64` paste karo"
+                    "3. Owner ko dena: Railway → Variables → `COOKIES_B64`"
                 )
             error_embed = discord.Embed(
                 title="❌ Error",
