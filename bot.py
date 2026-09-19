@@ -483,6 +483,63 @@ class BeastModeView(discord.ui.View):
             ))
 
 
+class BeastConfirmModal(discord.ui.Modal):
+    """Beast Mode confirm: type CONFIRM -> action chalao (reset balance / ban-unban)."""
+
+    def __init__(self, title: str, action: str, beast_view: "BeastModeView"):
+        super().__init__(title=f"⚠️ {title[:40]}", timeout=300)
+        self.action = action
+        self.beast_view = beast_view
+        self.confirm_input = discord.ui.TextInput(
+            label="Type CONFIRM to proceed",
+            placeholder="CONFIRM",
+            min_length=1,
+            max_length=10,
+            required=True,
+        )
+        self.add_item(self.confirm_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        if self.confirm_input.value.strip().upper() != "CONFIRM":
+            return await interaction.response.send_message(
+                "❌ CONFIRM likho hi sahi - cancel kar diya.", ephemeral=True
+            )
+
+        target = self.beast_view.target
+        actor = self.beast_view.actor
+
+        for child in self.beast_view.children:
+            child.disabled = True
+
+        if self.action == "reset_balance":
+            await database.give_coins(target.id, 0)  # user ensure
+            await database.set_coins(target.id, 1000)
+            embed = discord.Embed(
+                title="✅ Beast Mode - Balance reset",
+                description=f"**{target.mention}** ka balance **1000** {COIN} par reset ho gaya.",
+                color=discord.Color.gold(),
+            )
+        elif self.action == "ban_user":
+            banned = await database.is_banned(target.id)
+            await database.set_banned(target.id, not banned)
+            state = "banned" if not banned else "unbanned"
+            emoji = "⛔" if not banned else "🔓"
+            embed = discord.Embed(
+                title=f"{emoji} Beast Mode - User {state}",
+                description=f"**{target.mention}** ab **{state}** hai.",
+                color=discord.Color.red() if not banned else discord.Color.green(),
+            )
+        else:
+            embed = discord.Embed(
+                title="❌ Unknown action",
+                description="Ye action abhi supported nahi hai.",
+                color=discord.Color.dark_grey(),
+            )
+
+        embed.set_thumbnail(url=BANNER_URL)
+        await interaction.response.edit_message(embed=embed, view=self.beast_view)
+
+
 class GiveCoinsModal(discord.ui.Modal):
     """Beast Mode: target ko jitne chaho coins do (negative = wapas lo)."""
 

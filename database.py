@@ -1079,3 +1079,17 @@ async def give_coins(user_id: int, amount: int) -> int:
         async with db.execute('SELECT coins FROM users WHERE user_id = ?', (user_id,)) as cursor:
             row = await cursor.fetchone()
             return row[0] if row else 0
+
+async def set_coins(user_id: int, amount: int) -> int:
+    """Balance ko exact value par set karo (Beast Mode reset ke liye).
+
+    Creates the user if needed (default 1000 overridden by amount).
+    """
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('''
+            INSERT INTO users (user_id, coins, agreed)
+            VALUES (?, ?, TRUE)
+            ON CONFLICT(user_id) DO UPDATE SET coins = ?
+        ''', (user_id, amount, amount))
+        await db.commit()
+        return amount
