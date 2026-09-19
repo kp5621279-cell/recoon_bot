@@ -90,6 +90,7 @@ class CustomHelpCommand(commands.HelpCommand):
         config_cmds = []
         music_cmds = []
         admin_cmds = []
+        fun_cmds = []
         is_owner = await self.context.bot.is_owner(self.context.author)
 
         for command in await self.filter_commands(self.context.bot.commands, sort=True):
@@ -104,6 +105,8 @@ class CustomHelpCommand(commands.HelpCommand):
                 econ_cmds.append(cmd_info)
             elif command.name in ["afk", "profile", "banners", "buy", "banner", "setabout"]:
                 econ_cmds.append(cmd_info)
+            elif command.name in ["kiss", "hug", "pat", "cuddle", "poke", "bite", "slap", "wave"]:
+                fun_cmds.append(cmd_info)
             elif command.name in ["ping", "help", "invite", "lang"]:
                 config_cmds.append(cmd_info)
             elif command.name == "set":
@@ -121,6 +124,8 @@ class CustomHelpCommand(commands.HelpCommand):
             embed.add_field(name=i18n.t(lang, "help_economy"), value="\n".join(econ_cmds), inline=False)
         if music_cmds:
             embed.add_field(name=i18n.t(lang, "help_music"), value="\n".join(music_cmds), inline=False)
+        if fun_cmds:
+            embed.add_field(name=i18n.t(lang, "help_fun"), value="\n".join(fun_cmds), inline=False)
         if config_cmds:
             embed.add_field(name=i18n.t(lang, "help_config"), value="\n".join(config_cmds), inline=False)
         if admin_cmds:
@@ -159,6 +164,7 @@ class MyBot(commands.Bot):
         await self.load_extension("mines")
         await self.load_extension("slots")
         await self.load_extension("profile")
+        await self.load_extension("gifs")
 
 bot = MyBot(
     command_prefix=get_dynamic_prefix,
