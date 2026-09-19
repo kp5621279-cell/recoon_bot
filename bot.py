@@ -109,12 +109,25 @@ bot = MyBot(
     help_command=CustomHelpCommand(),
 )
 
+LANG_FLAGS = {
+    "en": "🇬🇧", "hi": "🇮🇳", "mr": "🇮🇳", "fr": "🇫🇷",
+    "id": "🇮🇩", "ar": "🇸🇦", "zh": "🇨🇳", "ja": "🇯🇵",
+}
+
 class LanguageView(discord.ui.View):
     """Language picker - agreement ke baad aur !lang se bhi."""
 
-    def __init__(self, user_id: int):
+    def __init__(self, user_id: int, current: str = None):
         super().__init__(timeout=120.0)
         self.user_id = user_id
+        # Har instance ke liye FRESH options (default highlight per-user chahiye)
+        self.lang_select.options = [
+            discord.SelectOption(
+                label=name, value=code, emoji=LANG_FLAGS.get(code),
+                default=(code == current),
+            )
+            for code, name in i18n.LANG_NAMES.items()
+        ]
 
     @staticmethod
     def prompt_embed(cur_lang: str, prefix: str = "!") -> discord.Embed:
@@ -126,20 +139,12 @@ class LanguageView(discord.ui.View):
         embed.set_thumbnail(url=BANNER_URL)
         return embed
 
-    @staticmethod
-    def _options(current: str = None):
-        opts = []
-        for code, name in i18n.LANG_NAMES.items():
-            opts.append(discord.SelectOption(
-                label=name, value=code,
-                default=(code == current),
-                emoji="🇬🇧" if code == "en" else "🇮🇳" if code in ("hi", "mr") else
-                      "🇫🇷" if code == "fr" else "🇮🇩" if code == "id" else
-                      "🇸🇦" if code == "ar" else "🇨🇳" if code == "zh" else "🇯🇵",
-            ))
-        return opts
-
-    @discord.ui.select(placeholder="🌐 Language chuno...", min_values=1, max_values=1)
+    @discord.ui.select(
+        placeholder="🌐 Language chuno...",
+        min_values=1,
+        max_values=1,
+        options=[discord.SelectOption(label=name, value=code) for code, name in i18n.LANG_NAMES.items()],
+    )
     async def lang_select(self, interaction: discord.Interaction, select: discord.ui.Select):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message(i18n.t("en", "not_for_you"), ephemeral=True)
@@ -477,7 +482,7 @@ async def invite(ctx: commands.Context):
 async def language(ctx: commands.Context):
     """🌐 Apni language chuno - bot ke saare messages isi me aayenge."""
     lang = await database.get_lang(ctx.author.id)
-    view = LanguageView(ctx.author.id)
+    view = LanguageView(ctx.author.id, lang)
     await ctx.send(
         embed=LanguageView.prompt_embed(lang, await database.get_prefix(ctx.guild.id) if ctx.guild else "!"),
         view=view,
