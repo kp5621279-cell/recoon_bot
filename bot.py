@@ -6,6 +6,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 import database
+import i18n
 
 load_dotenv()
 
@@ -33,9 +34,11 @@ intents.message_content = True
 
 class CustomHelpCommand(commands.HelpCommand):
     async def send_bot_help(self, mapping):
+        lang = await database.get_lang(self.context.author.id)
+        p = self.context.clean_prefix
         embed = discord.Embed(
-            title="🎮 Recoon Bot Help Menu",
-            description=f"Here are all the commands. Your current prefix is: `{self.context.clean_prefix}`\n\n[**🔗 Click Here To Invite Me!**](https://discord.com/oauth2/authorize?client_id=1550499489414909972&permissions=5454653866506561&integration_type=0&scope=bot)",
+            title=i18n.t(lang, "help_title"),
+            description=i18n.t(lang, "help_prefix", prefix=p) + f"\n\n[**🔗 Click Here To Invite Me!**](https://discord.com/oauth2/authorize?client_id=1550499489414909972&permissions=5454653866506561&integration_type=0&scope=bot)",
             color=discord.Color.blurple()
         )
         embed.set_image(url=BANNER_URL)
@@ -60,15 +63,15 @@ class CustomHelpCommand(commands.HelpCommand):
                 music_cmds.append(cmd_info)
 
         if games_cmds:
-            embed.add_field(name="🎲 Games", value="\n".join(games_cmds), inline=False)
+            embed.add_field(name=i18n.t(lang, "help_games"), value="\n".join(games_cmds), inline=False)
         if econ_cmds:
-            embed.add_field(name="💰 Economy", value="\n".join(econ_cmds), inline=False)
+            embed.add_field(name=i18n.t(lang, "help_economy"), value="\n".join(econ_cmds), inline=False)
         if music_cmds:
-            embed.add_field(name="🎵 Music", value="\n".join(music_cmds), inline=False)
+            embed.add_field(name=i18n.t(lang, "help_music"), value="\n".join(music_cmds), inline=False)
         if config_cmds:
-            embed.add_field(name="⚙️ General & Config", value="\n".join(config_cmds), inline=False)
+            embed.add_field(name=i18n.t(lang, "help_config"), value="\n".join(config_cmds), inline=False)
 
-        embed.set_footer(text=f"For more info, type {self.context.clean_prefix}help <command>")
+        embed.set_footer(text=i18n.t(lang, "help_footer", prefix=p))
         await self.get_destination().send(embed=embed)
 
     async def send_command_help(self, command):
@@ -106,6 +109,53 @@ bot = MyBot(
     help_command=CustomHelpCommand(),
 )
 
+class LanguageView(discord.ui.View):
+    """Language picker - agreement ke baad aur !lang se bhi."""
+
+    def __init__(self, user_id: int):
+        super().__init__(timeout=120.0)
+        self.user_id = user_id
+
+    @staticmethod
+    def prompt_embed(lang: str, prefix: str = "!") -> discord.Embed:
+        embed = discord.Embed(
+            title=i18n.t(lang, "lang_title"),
+            description=i18n.t(lang, "lang_desc", lang=i18n.LANG_NAMES.get(lang, lang), prefix=prefix),
+            color=discord.Color.blurple(),
+        )
+        embed.set_thumbnail(url=BANNER_URL)
+        return embed
+
+    @staticmethod
+    def _options(current: str = None):
+        opts = []
+        for code, name in i18n.LANG_NAMES.items():
+            opts.append(discord.SelectOption(
+                label=name, value=code,
+                default=(code == current),
+                emoji="🇬🇧" if code == "en" else "🇮🇳" if code in ("hi", "mr") else
+                      "🇫🇷" if code == "fr" else "🇮🇩" if code == "id" else
+                      "🇸🇦" if code == "ar" else "🇨🇳" if code == "zh" else "🇯🇵",
+            ))
+        return opts
+
+    @discord.ui.select(placeholder="🌐 Language chuno...", min_values=1, max_values=1)
+    async def lang_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message(i18n.t("en", "not_for_you"), ephemeral=True)
+        code = select.values[0]
+        await database.set_lang(self.user_id, code)
+        for child in self.children:
+            child.disabled = True
+        embed = discord.Embed(
+            title=i18n.t(code, "lang_set", lang=i18n.LANG_NAMES[code]),
+            color=discord.Color.green(),
+        )
+        embed.set_thumbnail(url=BANNER_URL)
+        await interaction.response.edit_message(embed=embed, view=self)
+        self.stop()
+
+
 class AgreementView(discord.ui.View):
     def __init__(self, user_id: int):
         super().__init__(timeout=60.0)
@@ -115,24 +165,33 @@ class AgreementView(discord.ui.View):
     @discord.ui.button(label="I Agree", style=discord.ButtonStyle.green, custom_id="agree_btn")
     async def agree(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            await interaction.response.send_message("This is not for you!", ephemeral=True)
+            await interaction.response.send_message(i18n.t("en", "not_for_you"), ephemeral=True)
             return
         await database.create_user(self.user_id, coins=1000)
         self.value = True
         for child in self.children:
             child.disabled = True
-        await interaction.response.edit_message(content=f"✅ You have agreed to the terms! Your account is created with 1000 {COIN}. Try your command again.", view=self)
+        await interaction.response.edit_message(
+            content=i18n.t("en", "agreed", coin=COIN), view=self
+        )
         self.stop()
+        # Agreement ke baad language chuno
+        try:
+            await interaction.followup.send(
+                embed=LanguageView.prompt_embed("en"), view=LanguageView(self.user_id),
+            )
+        except discord.HTTPException:
+            pass
 
     @discord.ui.button(label="Decline", style=discord.ButtonStyle.red, custom_id="decline_btn")
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            await interaction.response.send_message("This is not for you!", ephemeral=True)
+            await interaction.response.send_message(i18n.t("en", "not_for_you"), ephemeral=True)
             return
         self.value = False
         for child in self.children:
             child.disabled = True
-        await interaction.response.edit_message(content="❌ You declined. You cannot use the bot without agreeing.", view=self)
+        await interaction.response.edit_message(content=i18n.t("en", "declined"), view=self)
         self.stop()
 
 # (requester_id, target_id) pairs still waiting for an answer in DMs
@@ -339,7 +398,8 @@ class GiveCoinsModal(discord.ui.Modal):
 async def global_agreement_check(ctx: commands.Context):
     # Banned users ko sabse pehle rok do (owner chhod kar)
     if not await bot.is_owner(ctx.author) and await database.is_banned(ctx.author.id):
-        await ctx.send("⛔ Tum is bot se **ban** ho. Owner se contact karo.")
+        lang = await database.get_lang(ctx.author.id)
+        await ctx.send(i18n.t(lang, "banned"))
         raise commands.CheckFailure("User is banned.")
 
     user_data = await database.get_user(ctx.author.id)
@@ -347,8 +407,9 @@ async def global_agreement_check(ctx: commands.Context):
         return True
     
     # Send agreement prompt
+    lang = await database.get_lang(ctx.author.id)
     view = AgreementView(ctx.author.id)
-    await ctx.send("Welcome! This is a Games & Fun bot. To use this bot and create your account, you must agree to the terms.", view=view)
+    await ctx.send(i18n.t(lang, "welcome"), view=view)
     
     # We raise an error so the current command stops executing. 
     # The user has to run the command again after agreeing.
@@ -362,18 +423,16 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.CommandNotFound):
         pass
     elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send(f"❌ Missing argument: {error.param.name}")
+        lang = await database.get_lang(ctx.author.id)
+        await ctx.send(i18n.t(lang, "missing_arg", param=error.param.name))
     elif isinstance(error, commands.BadArgument):
-        await ctx.send("❌ Bad argument provided.")
+        lang = await database.get_lang(ctx.author.id)
+        await ctx.send(i18n.t(lang, "bad_arg"))
     elif isinstance(error, commands.CommandInvokeError) and isinstance(error.original, discord.Forbidden):
         print(f"Missing permissions: {error.original}")
         try:
-            await ctx.send(
-                "❌ Bot ke paas is kaam ke liye permission nahi hai!\n"
-                "**Server Settings → Roles** me bot ka role kholo aur ye ON karo: "
-                "Send Messages, Embed Links, Attach Files, Read Message History, "
-                "Connect + Speak (music ke liye)."
-            )
+            lang = await database.get_lang(ctx.author.id)
+            await ctx.send(i18n.t(lang, "no_perm_bot"))
         except discord.HTTPException:
             pass  # channel me bolne ki bhi permission nahi - kuch aur nahi kar sakta
     else:
@@ -404,13 +463,35 @@ async def set_prefix(ctx: commands.Context, new_prefix: str):
 @bot.command(name="ping")
 async def ping(ctx: commands.Context) -> None:
     """Check bot latency."""
-    await ctx.send(f"🏓 Pong! `{round(bot.latency * 1000)}ms`")
+    lang = await database.get_lang(ctx.author.id)
+    await ctx.send(i18n.t(lang, "ping", ms=round(bot.latency * 1000)))
 
 @bot.command(name="invite", aliases=["add"])
 async def invite(ctx: commands.Context):
     """Get the invite link for this bot."""
+    lang = await database.get_lang(ctx.author.id)
     link = "https://discord.com/oauth2/authorize?client_id=1550499489414909972&permissions=5454653866506561&integration_type=0&scope=bot"
-    await ctx.send(f"🔗 **Click the link below to invite me to your server:**\n{link}")
+    await ctx.send(i18n.t(lang, "invite", link=link))
+
+@bot.command(name="lang", aliases=["language"])
+async def language(ctx: commands.Context):
+    """🌐 Apni language chuno - bot ke saare messages isi me aayenge."""
+    lang = await database.get_lang(ctx.author.id)
+    view = LanguageView(ctx.author.id)
+    await ctx.send(
+        embed=LanguageView.prompt_embed(lang, await database.get_prefix(ctx.guild.id) if ctx.guild else "!"),
+        view=view,
+    )
+
+@set_group.command(name="lang")
+@commands.is_owner()
+async def set_lang(ctx: commands.Context, user: discord.User, code: str):
+    """Owner: kisi user ki language set karo. Usage: !set lang @user hi"""
+    code = code.lower()
+    if code not in i18n.LANG_NAMES:
+        return await ctx.send(f"❌ Unknown language code. Options: {', '.join(i18n.LANG_NAMES)}")
+    await database.set_lang(user.id, code)
+    await ctx.send(f"✅ {user.mention} ki language ab **{i18n.LANG_NAMES[code]}** hai.")
 
 # Read the txt file in this folder: each line is a URL to a file that holds links
 def read_source_urls() -> list:
@@ -653,8 +734,9 @@ async def pay_coins(ctx: commands.Context, amount: int, target: discord.Member):
 @bot.command(name="bal", aliases=["balance", "coins", "cash"])
 async def check_balance(ctx: commands.Context):
     f"""Check your {COIN} balance."""
+    lang = await database.get_lang(ctx.author.id)
     user_data = await database.get_user(ctx.author.id)
-    await ctx.send(f"💰 You have **{user_data['coins']}** {COIN}.")
+    await ctx.send(i18n.t(lang, "bal", coins=user_data['coins'], coin=COIN))
 
 @bot.command(name="daily")
 async def daily_reward(ctx: commands.Context):

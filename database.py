@@ -52,6 +52,11 @@ async def init_db():
         except Exception:
             pass
 
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN lang TEXT DEFAULT 'en'")
+        except Exception:
+            pass
+
         await db.execute('''
             CREATE TABLE IF NOT EXISTS voice_channels (
                 guild_id INTEGER PRIMARY KEY,
@@ -218,6 +223,26 @@ async def reset_coins(user_id: int) -> int:
         ''', (user_id,))
         await db.commit()
         return 1000
+
+async def get_lang(user_id: int) -> str:
+    """User ki chosen language (default 'en')."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        try:
+            async with db.execute('SELECT lang FROM users WHERE user_id = ?', (user_id,)) as cursor:
+                row = await cursor.fetchone()
+                return (row[0] if row and row[0] else "en")
+        except Exception:
+            return "en"
+
+async def set_lang(user_id: int, lang: str):
+    """Language save karo. User exist na kare to bana do (default 1000 coins, agreed)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('''
+            INSERT INTO users (user_id, coins, agreed, lang)
+            VALUES (?, 1000, TRUE, ?)
+            ON CONFLICT(user_id) DO UPDATE SET lang = excluded.lang
+        ''', (user_id, lang))
+        await db.commit()
 
 async def give_coins(user_id: int, amount: int) -> int:
     """Owner ke Beast Mode se coins add/subtract karo, naya balance return karo.
