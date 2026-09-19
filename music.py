@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import yt_dlp
 import asyncio
+import time
 
 import database
 
@@ -59,6 +60,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         self.data = data
         self.title = data.get('title')
         self.url = data.get('url')
+        self.duration = data.get('duration') or 0
 
     @classmethod
     async def from_query(cls, query, loop=None):
@@ -97,9 +99,16 @@ class MusicControlView(discord.ui.View):
         
         if voice_client.is_playing():
             voice_client.pause()
+            st = self.cog.song_state.get(self.guild_id)
+            if st and st["paused_at"] is None:
+                st["paused_at"] = time.time()
             await interaction.response.send_message("⏸️ Paused the music.", ephemeral=True)
         elif voice_client.is_paused():
             voice_client.resume()
+            st = self.cog.song_state.get(self.guild_id)
+            if st and st["paused_at"] is not None:
+                st["paused_total"] += time.time() - st["paused_at"]
+                st["paused_at"] = None
             await interaction.response.send_message("▶️ Resumed the music.", ephemeral=True)
         else:
             await interaction.response.send_message("Nothing is playing.", ephemeral=True)
@@ -132,6 +141,8 @@ class Music(commands.Cog):
         self.bot = bot
         self.queues = {} # guild_id: [queries]
         self._startup_done = False
+        self.progress_tasks = {}  # guild_id: asyncio.Task (now-playing bar updater)
+        self.song_state = {}      # guild_id: {start, paused_at, paused_total, duration}
 
     async def _set_voice_status(self, guild, status):
         """Set the text shown under the voice channel's name ("Playing - ...").
@@ -218,6 +229,57 @@ class Music(commands.Cog):
             else:
                 await self._forget_voice_channel(guild_id)
 
+    # ------------------- progress bar -------------------
+
+    @staticmethod
+    def _fmt_time(seconds: float) -> str:
+        seconds = max(0, int(seconds))
+        h, rem = divmod(seconds, 3600)
+        m, s = divmod(rem, 60)
+        return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+    def _cancel_progress(self, guild_id):
+        task = self.progress_tasks.pop(guild_id, None)
+        if task:
+            task.cancel()
+        self.song_state.pop(guild_id, None)
+
+    def _start_progress(self, guild_id: int, message: discord.Message, view, duration: float, title: str):
+        """Now-playing embed ko har 10 sec update karo: bar + kitna baja/kitna bacha."""
+        self._cancel_progress(guild_id)
+        self.song_state[guild_id] = {
+            "start": time.time(), "paused_at": None, "paused_total": 0.0, "duration": float(duration or 0),
+        }
+        bar_len = 16
+
+        async def _run():
+            while True:
+                await asyncio.sleep(10)
+                st = self.song_state.get(guild_id)
+                if not st:
+                    return
+                now = time.time()
+                elapsed = now - st["start"] - st["paused_total"]
+                if st["paused_at"] is not None:
+                    elapsed -= now - st["paused_at"]
+                if st["duration"] > 0:
+                    pct = min(max(elapsed / st["duration"], 0.0), 1.0)
+                    filled = round(pct * bar_len)
+                    bar = "━" * filled + "🔴" + "─" * (bar_len - filled)
+                    desc = f"**{title}**\n\n{bar}\n`{self._fmt_time(elapsed)} / {self._fmt_time(st['duration'])}`"
+                    if st["paused_at"] is not None:
+                        desc += " ⏸️"
+                else:
+                    desc = f"**{title}**\n\n🔴 Live stream / duration unknown"
+                embed = discord.Embed(title="<:music:1550534050715009065> Now Playing", description=desc, color=discord.Color.green())
+                embed.set_thumbnail(url=BANNER_URL)
+                try:
+                    await message.edit(embed=embed, view=view)
+                except discord.HTTPException:
+                    return
+
+        self.progress_tasks[guild_id] = self.bot.loop.create_task(_run())
+
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
         """Stay in voice 24/7: rejoin on drops, leave only when kicked."""
@@ -260,6 +322,8 @@ class Music(commands.Cog):
             def after_playing(error):
                 if error:
                     print(f"Player error: {error}")
+                # Progress bar updater ko band karo (audio thread se safe tarike se)
+                self.bot.loop.call_soon_threadsafe(self._cancel_progress, ctx.guild.id)
                 # Clear activity if nothing left in queue
                 if not self.queues.get(ctx.guild.id):
                     self.bot.loop.create_task(
@@ -277,10 +341,18 @@ class Music(commands.Cog):
             await self._set_voice_status(ctx.guild, f"🎶 Playing - {player.title}")
             print(f"Status set to: {player.title}")
             
-            embed = discord.Embed(title="<:music:1550534050715009065> Now Playing", description=f"**{player.title}**", color=discord.Color.green())
+            embed_title = "<:music:1550534050715009065> Now Playing"
+            duration = getattr(player, "duration", 0) or 0
+            if duration > 0:
+                bar = "🔴" + "─" * 15
+                desc = f"**{player.title}**\n\n{bar}\n`0:00 / {self._fmt_time(duration)}`"
+            else:
+                desc = f"**{player.title}**\n\n🔴 Live stream / duration unknown"
+            embed = discord.Embed(title=embed_title, description=desc, color=discord.Color.green())
             embed.set_thumbnail(url=BANNER_URL)
             view = MusicControlView(self, ctx.guild.id)
-            await ctx.send(embed=embed, view=view)
+            msg = await ctx.send(embed=embed, view=view)
+            self._start_progress(ctx.guild.id, msg, view, duration, player.title)
         except Exception as e:
             desc = f"Error playing song: `{str(e)}`"
             if "Sign in to confirm" in str(e) or "not a bot" in str(e):
@@ -367,6 +439,7 @@ class Music(commands.Cog):
         voice_client = ctx.guild.voice_client
         if voice_client:
             self.queues[ctx.guild.id] = []
+            self._cancel_progress(ctx.guild.id)
             voice_client.stop()
             await self._set_voice_status(ctx.guild, None)
             await voice_client.disconnect()
@@ -382,6 +455,7 @@ class Music(commands.Cog):
         if voice_client:
             self.queues[ctx.guild.id] = []
             await self._forget_voice_channel(ctx.guild.id)
+            self._cancel_progress(ctx.guild.id)
             voice_client.stop()
             await self._set_voice_status(ctx.guild, None)
             await voice_client.disconnect()
