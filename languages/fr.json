@@ -251,5 +251,6 @@
   "lb_streak_val": "série de {n} jours",
   "lb_games_val": "{n} parties jouées",
   "lb_empty": "Personne dans ce classement — soyez le premier !",
-  "lb_footer": "Changez de catégorie dans le menu • {prefix}top"
+  "lb_footer": "Changez de catégorie dans le menu • {prefix}top",
+  "help_swipe": "Naviguez avec ◀️ ▶️"
 }

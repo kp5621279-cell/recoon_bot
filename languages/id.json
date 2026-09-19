@@ -251,5 +251,6 @@
   "lb_streak_val": "streak {n} hari",
   "lb_games_val": "{n} game dimainkan",
   "lb_empty": "Belum ada siapa pun di papan peringkat ini — jadilah yang pertama!",
-  "lb_footer": "Ganti kategori dari dropdown • {prefix}top"
+  "lb_footer": "Ganti kategori dari dropdown • {prefix}top",
+  "help_swipe": "Geser halaman dengan ◀️ ▶️"
 }

@@ -251,5 +251,6 @@
   "lb_streak_val": "连续 {n} 天",
   "lb_games_val": "玩了 {n} 局",
   "lb_empty": "这个排行榜上还没有人——做第一个吧！",
-  "lb_footer": "从下拉菜单切换类别 • {prefix}top"
+  "lb_footer": "从下拉菜单切换类别 • {prefix}top",
+  "help_swipe": "用 ◀️ ▶️ 翻页"
 }

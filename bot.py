@@ -73,43 +73,82 @@ async def get_dynamic_prefix(bot, message):
 intents = discord.Intents.default()
 intents.message_content = True
 
+class HelpPaginatorView(discord.ui.View):
+    """Help menu ka swipe paginator - ◀️ ▶️ buttons se pages slide karo."""
+
+    def __init__(self, ctx: commands.Context, pages: list):
+        super().__init__(timeout=180.0)
+        self.ctx = ctx
+        self.pages = pages
+        self.index = 0
+        self.message = None
+        self._sync()
+
+    def _sync(self):
+        one_page = len(self.pages) <= 1
+        self.prev_btn.disabled = one_page
+        self.next_btn.disabled = one_page
+        self.page_btn.label = f"{self.index + 1}/{len(self.pages)}"
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.ctx.author.id:
+            lang = await database.get_lang(interaction.user.id)
+            await interaction.response.send_message(
+                i18n.t(lang, "lb_not_yours", mention=interaction.user.mention), ephemeral=True
+            )
+            return False
+        return True
+
+    @discord.ui.button(emoji="◀️", style=discord.ButtonStyle.secondary)
+    async def prev_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.index = (self.index - 1) % len(self.pages)  # wrap-around
+        self._sync()
+        await interaction.response.edit_message(embed=self.pages[self.index], view=self)
+
+    @discord.ui.button(label="1/1", style=discord.ButtonStyle.gray, disabled=True)
+    async def page_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass  # sirf page counter
+
+    @discord.ui.button(emoji="▶️", style=discord.ButtonStyle.secondary)
+    async def next_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.index = (self.index + 1) % len(self.pages)  # wrap-around
+        self._sync()
+        await interaction.response.edit_message(embed=self.pages[self.index], view=self)
+
+    async def on_timeout(self):
+        try:
+            for item in self.children:
+                item.disabled = True
+            if self.message:
+                await self.message.edit(view=self)
+        except Exception:
+            pass
+
+
 class CustomHelpCommand(commands.HelpCommand):
     async def send_bot_help(self, mapping):
         lang = await database.get_lang(self.context.author.id)
         p = self.context.clean_prefix
-        embed = discord.Embed(
-            title=i18n.t(lang, "help_title"),
-            description=i18n.t(lang, "help_prefix", prefix=p) + f"\n\n[**🔗 Click Here To Invite Me!**](https://discord.com/oauth2/authorize?client_id=1550499489414909972&permissions=5454653866506561&integration_type=0&scope=bot)",
-            color=discord.Color.blurple()
-        )
-        embed.set_image(url=BANNER_URL)
-        
-        # Categorize commands manually since we are not using Cogs
-        games_cmds = []
-        econ_cmds = []
-        config_cmds = []
-        music_cmds = []
-        admin_cmds = []
-        fun_cmds = []
         is_owner = await self.context.bot.is_owner(self.context.author)
+
+        # Categorize commands manually since we are not using Cogs
+        games_cmds, econ_cmds, config_cmds, music_cmds, admin_cmds, fun_cmds = [], [], [], [], [], []
 
         for command in await self.filter_commands(self.context.bot.commands, sort=True):
             # Help description pehle user ki language se, fallback docstring
             desc = i18n.t(lang, f"h_{command.name}")
             if desc == f"h_{command.name}":
                 desc = command.short_doc
-            cmd_info = f"**{self.context.clean_prefix}{command.name}** - {desc}"
-            if command.name in ["coin", "aviator", "mine", "slots"]:
-                games_cmds.append(cmd_info)
-            elif command.name in ["bal", "daily", "req", "pay", "pray", "luck", "lkf", "top"]:
-                econ_cmds.append(cmd_info)
-            elif command.name in ["afk", "profile", "banners", "buy", "banner", "setabout"]:
-                econ_cmds.append(cmd_info)
-            elif command.name in ["kiss", "hug", "pat", "cuddle", "poke", "bite", "slap", "wave"]:
+            cmd_info = f"**{p}{command.name}** - {desc}"
+            if getattr(command, "module", "") == "gifs":
+                # saare gif/roleplay commands (dynamic) Fun page me
                 fun_cmds.append(cmd_info)
-            elif command.name in ["ping", "help", "invite", "lang"]:
-                config_cmds.append(cmd_info)
-            elif command.name == "set":
+            elif command.name in ["coin", "aviator", "mine", "slots"]:
+                games_cmds.append(cmd_info)
+            elif command.name in ["bal", "daily", "req", "pay", "pray", "luck", "lkf", "top",
+                                  "afk", "profile", "shop", "banners", "buy", "banner", "equipb", "setabout"]:
+                econ_cmds.append(cmd_info)
+            elif command.name in ["ping", "help", "invite", "lang", "set"]:
                 config_cmds.append(cmd_info)
             elif command.name in ["play", "join", "leave", "stop", "skip"]:
                 music_cmds.append(cmd_info)
@@ -118,21 +157,40 @@ class CustomHelpCommand(commands.HelpCommand):
                 if self.context.author.guild_permissions.manage_guild or is_owner:
                     admin_cmds.append(cmd_info)
 
-        if games_cmds:
-            embed.add_field(name=i18n.t(lang, "help_games"), value="\n".join(games_cmds), inline=False)
-        if econ_cmds:
-            embed.add_field(name=i18n.t(lang, "help_economy"), value="\n".join(econ_cmds), inline=False)
-        if music_cmds:
-            embed.add_field(name=i18n.t(lang, "help_music"), value="\n".join(music_cmds), inline=False)
-        if fun_cmds:
-            embed.add_field(name=i18n.t(lang, "help_fun"), value="\n".join(fun_cmds), inline=False)
-        if config_cmds:
-            embed.add_field(name=i18n.t(lang, "help_config"), value="\n".join(config_cmds), inline=False)
+        categories = [
+            (i18n.t(lang, "help_games"), games_cmds),
+            (i18n.t(lang, "help_economy"), econ_cmds),
+            (i18n.t(lang, "help_music"), music_cmds),
+            (i18n.t(lang, "help_fun"), fun_cmds),
+            (i18n.t(lang, "help_config"), config_cmds),
+        ]
         if admin_cmds:
-            embed.add_field(name="🛡️ Admin", value="\n".join(admin_cmds), inline=False)
+            categories.append(("🛡️ Admin", admin_cmds))
 
-        embed.set_footer(text=i18n.t(lang, "help_footer", prefix=p))
-        await self.get_destination().send(embed=embed)
+        # Har category = ek page (swipe menu)
+        pages = []
+        for idx, (title, cmds) in enumerate(categories):
+            if not cmds:
+                continue
+            desc = i18n.t(lang, "help_prefix", prefix=p) + "\n"
+            if not pages:  # pehle page par invite link
+                desc += "\n[**🔗 Click Here To Invite Me!**](https://discord.com/oauth2/authorize?client_id=1550499489414909972&permissions=5454653866506561&integration_type=0&scope=bot)"
+            desc += "\n\n" + "\n".join(cmds)
+            embed = discord.Embed(title=title, description=desc, color=discord.Color.blurple())
+            embed.set_thumbnail(url=BANNER_URL)
+            embed.set_footer(text=i18n.t(lang, "help_swipe") + " • " + i18n.t(lang, "help_footer", prefix=p))
+            pages.append(embed)
+
+        if not pages:
+            pages = [discord.Embed(
+                title=i18n.t(lang, "help_title"),
+                description=i18n.t(lang, "help_prefix", prefix=p),
+                color=discord.Color.blurple(),
+            )]
+
+        view = HelpPaginatorView(self.context, pages)
+        msg = await self.get_destination().send(embed=pages[0], view=view)
+        view.message = msg
 
     async def send_command_help(self, command):
         embed = discord.Embed(

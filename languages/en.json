@@ -271,5 +271,6 @@
   "lb_streak_val": "{n} day streak",
   "lb_games_val": "{n} games played",
   "lb_empty": "Nobody is on this leaderboard yet — be the first!",
-  "lb_footer": "Switch category from the dropdown • {prefix}top"
+  "lb_footer": "Switch category from the dropdown • {prefix}top",
+  "help_swipe": "Swipe pages with ◀️ ▶️"
 }
