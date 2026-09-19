@@ -911,6 +911,13 @@ async def get_last_hunt(user_id: int) -> float:
             row = await cursor.fetchone()
             return (row[0] if row and row[0] else 0.0)
 
+async def update_species_store(species_id: str, price: int, in_store: bool):
+    """Store pricing/catalog change ko existing species par sync karo."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('UPDATE animal_species SET price = ?, in_store = ? WHERE id = ?',
+                         (price, 1 if in_store else 0, species_id))
+        await db.commit()
+
 async def set_animal_image_url(species_id: str, url: str):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute('UPDATE animal_species SET image_url = ? WHERE id = ?', (url, species_id))

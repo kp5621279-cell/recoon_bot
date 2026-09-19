@@ -345,7 +345,7 @@
   "an_fight_winner": "{emoji} **{name}** jeet gaya {user} ke liye!\nDangal jeeta: **{wager}**",
   "an_level_up": "🎉 {emoji} **{name}** **Level {level}** par pahunch gaya! Stats +8% badhe!",
   "an_fight_tired": "Fight ke baad bhookh lagi: {w_emoji} aur {l_emoji} ka 1 ❤️ gaya — khilao (`{prefix}feeda`)!",
-  "an_shop_animals": "🐾 Animal Store (sirf rare wale)",
+  "an_shop_animals": "🐾 Animal Store",
   "an_shop_food": "🍔 Khana Store (khilao, power wapas)",
   "an_shop_abilities": "✨ Ability Store (per animal max 3)",
   "an_shop_hint": "🐾 Ye bhi hai: `{prefix}shop animals` • `{prefix}shop food` • `{prefix}shop abilities`",

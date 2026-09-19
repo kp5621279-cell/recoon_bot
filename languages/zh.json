@@ -325,7 +325,7 @@
   "an_fight_winner": "{emoji} **{name}** 为 {user} 获胜！\n赢得赌注：**{wager}**",
   "an_level_up": "🎉 {emoji} **{name}** 达到 **{level} 级**！属性+8%！",
   "an_fight_tired": "战斗后饿了：{w_emoji} 和 {l_emoji} 各失去1 ❤️——喂食吧！",
-  "an_shop_animals": "🐾 动物商店（仅稀有）",
+  "an_shop_animals": "🐾 动物商店",
   "an_shop_food": "🍔 食物商店（恢复力量）",
   "an_shop_abilities": "✨ 能力商店（每只动物最多3个）",
   "an_shop_hint": "🐾 还有：`{prefix}shop animals` • `{prefix}shop food` • `{prefix}shop abilities`",

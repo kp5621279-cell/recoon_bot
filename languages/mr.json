@@ -325,7 +325,7 @@
   "an_fight_winner": "{emoji} **{name}** नी {user} साठी जिंकले!\nबाजी जिंकली: **{wager}**",
   "an_level_up": "🎉 {emoji} **{name}** **स्तर {level}** वर पोहोचला! आकडेवारी +8% वाढली!",
   "an_fight_tired": "लढाईनंतर भूक: {w_emoji} आणि {l_emoji} चा 1 ❤️ गेला — खावा घे (`{prefix}feeda`)!",
-  "an_shop_animals": "🐾 प्राणी दुकान (फक्त दुर्मिळ)",
+  "an_shop_animals": "🐾 प्राणी दुकान",
   "an_shop_food": "🍔 खाणे दुकान (शक्ती पुनर्संचार)",
   "an_shop_abilities": "✨ क्षमता दुकान (प्रति प्राणी 3 मर्यादा)",
   "an_shop_hint": "🐾 हे सुद्धा: `{prefix}shop animals` • `{prefix}shop food` • `{prefix}shop abilities`",

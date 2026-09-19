@@ -64,8 +64,38 @@ SPECIES_SEED = [
     ("blade",      "Blade Fruit",       "<:850974bladefruit:1550922308279865434>", "mythic"),
 ]
 
-# Sirf ye 3 Rare store me bikte hain (baaki hunt se hi milenge)
-STORE_SPECIES = {"quake": 8000, "magma": 10000, "creation": 15000}
+# Store catalog: commons 1-5 lakh, rare 1-2M, mythic 3-7 lakh
+# (baaki rare hunt-only)
+STORE_SPECIES = {
+    # commons (1 - 5 lakh)
+    "ylightning": 100000, "kitsune": 130000, "eedragon": 160000, "pain": 190000,
+    "redlight": 220000, "shadow": 250000, "cbomb": 280000, "buddha": 310000,
+    "trex": 340000, "sound": 370000, "tiger": 400000, "blizzard": 500000,
+    # rare (1M - 2M)
+    "creation": 1000000, "magma": 1500000, "quake": 2000000,
+    # mythic (3 - 7 lakh)
+    "light": 300000, "spike": 400000, "spin": 500000, "eagle": 600000, "blade": 700000,
+}
+
+# Rarity ring colors (tiles/cards ke liye)
+RARITY_RING = {
+    "common":   (150, 155, 165),
+    "uncommon": (87, 242, 135),
+    "rare":     (88, 178, 255),
+    "mythic":   (200, 120, 255),
+    "gold":     (255, 200, 50),
+}
+
+
+def compact_price(n: int) -> str:
+    """100000 -> '100K', 1500000 -> '1.5M' (tile par chhota dikhane ke liye)."""
+    if n >= 1000000:
+        s = f"{n / 1000000:.1f}".rstrip("0").rstrip(".")
+        return s + "M"
+    if n >= 1000:
+        s = f"{n / 1000:.1f}".rstrip("0").rstrip(".")
+        return s + "K"
+    return str(n)
 
 # Food items (hunger hearts +1..5)
 FOODS = {
@@ -150,53 +180,87 @@ def _load_img(url: str):
 
 
 def render_collection_card(title: str, sections: list, footer: str = ""):
-    """Dark card: bade emoji icons grid + counts. sections = [{label, cells}].
-    cell = {emoji, count, star}. BytesIO(png) return karta hai."""
+    """Aesthetic dark card: tiles + rarity rings + count pills. sections = [{label, cells}].
+    cell = {emoji, count, star, ring, badge}. BytesIO(png) return karta hai."""
     from PIL import Image, ImageDraw, ImageFont
 
     def _font(size, bold=False):
         name = "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"
         return ImageFont.truetype(os.path.join(os.path.dirname(__file__), "fonts", name), size)
 
+    W = 900
+    PAD = 28
+    TILE_W, TILE_H = 96, 112
+    GAP = 10
+    ICON = 58
+    NEUTRAL = (88, 101, 124)
+
     secs = [s for s in sections if s["cells"]]
-    H = 96
+    H = 84
     for s in secs:
         rows = (len(s["cells"]) + _PER_ROW - 1) // _PER_ROW
-        H += 40 + rows * _CELL + 6
-    H += 56 if footer else 24
+        H += 40 + rows * (TILE_H + GAP) + 6
+    H += 58 if footer else 26
 
-    card = Image.new("RGBA", (880, H), (32, 34, 39, 255))
+    card = Image.new("RGBA", (W, H), (24, 26, 31, 255))
     d = ImageDraw.Draw(card)
-    d.rounded_rectangle([0, 0, 879, H - 1], radius=18, outline=(70, 75, 85, 255), width=2)
-    d.text((30, 22), title, font=_font(32, True), fill=(255, 255, 255))
 
-    y = 92
+    # top accent gradient strip
+    for x in range(W):
+        t = x / (W - 1)
+        col = tuple(int(a + (b - a) * t) for a, b in zip((255, 170, 60), (170, 120, 255)))
+        d.line([(x, 0), (x, 5)], fill=col + (255,))
+
+    # header
+    d.text((PAD, 24), title, font=_font(30, True), fill=(255, 255, 255))
+    d.rounded_rectangle([W - 130, 28, W - PAD, 58], radius=15, fill=(35, 38, 45, 255))
+    d.text((W - 130 + 16, 33), "ZOo", font=_font(16, True), fill=(255, 170, 60))
+
+    y = 84
     for s in secs:
-        d.text((30, y), s["label"], font=_font(20, True), fill=(158, 166, 180))
+        d.text((PAD, y), s["label"].upper(), font=_font(16, True), fill=(150, 158, 172))
         y += 36
         rows = (len(s["cells"]) + _PER_ROW - 1) // _PER_ROW
         for i, cell in enumerate(s["cells"]):
-            col, row = i % _PER_ROW, i // _PER_ROW
-            x = 30 + col * _CELL
-            cy = y + row * _CELL
+            col_i, row_i = i % _PER_ROW, i // _PER_ROW
+            x = PAD + col_i * (TILE_W + GAP)
+            ty = y + row_i * (TILE_H + GAP)
+            ring = tuple(cell.get("ring") or NEUTRAL)
+            # tile bg + rarity ring
+            d.rounded_rectangle([x, ty, x + TILE_W - 1, ty + TILE_H - 1], radius=14,
+                                fill=(42, 46, 55, 255), outline=ring + (255,), width=2)
+            # icon
             img = None
             for u in _emoji_urls(cell["emoji"]):
                 img = _load_img(u)
                 if img:
                     break
             if img:
-                card.alpha_composite(img.resize((_ICON, _ICON)), (x + 8, cy + 2))
+                card.alpha_composite(img.resize((ICON, ICON)), (x + (TILE_W - ICON) // 2, ty + 12))
+            # badge (top-left, e.g. store index)
+            badge = cell.get("badge")
+            if badge:
+                bw = d.textlength(badge, font=_font(13, True))
+                d.rounded_rectangle([x + 6, ty + 6, x + 6 + bw + 10, ty + 24], radius=8,
+                                    fill=(24, 26, 31, 230))
+                d.text((x + 11, ty + 8), badge, font=_font(13, True), fill=(190, 197, 210))
+            # count pill (bottom center)
             cnt = cell.get("count")
             if cnt:
-                w = d.textlength(cnt, font=_font(20, True))
-                d.text((x + (_CELL - 20 - w) / 2, cy + _ICON - 6), cnt,
-                       font=_font(20, True), fill=(255, 209, 84))
+                fnt = _font(15, True)
+                cw = d.textlength(cnt, font=fnt)
+                px1 = x + (TILE_W - (cw + 16)) / 2
+                py1 = ty + TILE_H - 32
+                d.rounded_rectangle([px1, py1, px1 + cw + 16, py1 + 22], radius=11,
+                                    fill=(24, 26, 31, 240))
+                d.text((px1 + 8, py1 + 2), cnt, font=fnt, fill=(255, 209, 84))
+            # star badge (top-right)
             if cell.get("star"):
-                d.text((x + 4, cy - 4), "★", font=_font(22, True), fill=(255, 209, 84))
-        y += rows * _CELL + 6
+                d.text((x + TILE_W - 24, ty + 4), "★", font=_font(20, True), fill=(255, 209, 84))
+        y += rows * (TILE_H + GAP) + 6
 
     if footer:
-        d.text((30, y + 4), footer, font=_font(20), fill=(148, 155, 168))
+        d.text((PAD, y + 8), footer, font=_font(16), fill=(140, 147, 160))
 
     buf = io.BytesIO()
     card.convert("RGB").save(buf, "PNG")
@@ -226,11 +290,17 @@ def pick_hunt_rarity():
 
 
 async def seed_species():
-    """Default catalog ensure karo (naye id hi add honge, purane untouched)."""
-    existing = {s["id"] for s in await database.get_all_species()}
+    """Default catalog ensure karo. Naye species insert; purane walo ka
+    price/in_store seed se sync (store pricing badle to DB me bhi pahunche)."""
+    existing = {s["id"]: s for s in await database.get_all_species()}
     for sid, name, emoji, rarity in SPECIES_SEED:
-        if sid not in existing:
-            await database.upsert_species(species_from_seed(sid, name, emoji, rarity))
+        spec = species_from_seed(sid, name, emoji, rarity)
+        if sid in existing:
+            old = existing[sid]
+            if old["price"] != spec["price"] or old["in_store"] != spec["in_store"]:
+                await database.update_species_store(sid, spec["price"], spec["in_store"])
+        else:
+            await database.upsert_species(spec)
 
 
 class FightView(discord.ui.View):
@@ -314,12 +384,14 @@ class Animals(commands.Cog):
             seen = {}
             for a in animals:
                 sid = a["species"]["id"]
-                ent = seen.setdefault(sid, {"emoji": a["species"]["emoji"], "n": 0, "star": False})
+                ent = seen.setdefault(sid, {"emoji": a["species"]["emoji"], "n": 0, "star": False,
+                                            "rarity": a["species"]["rarity"]})
                 ent["n"] += 1
                 if active and a["id"] == active["id"]:
                     ent["star"] = True
             cells = [{"emoji": e["emoji"], "count": str(e["n"]) if e["n"] > 1 else "",
-                      "star": e["star"]} for e in seen.values()]
+                      "star": e["star"], "ring": RARITY_RING.get(e["rarity"])}
+                     for e in seen.values()]
 
         # ---- rarity summary + zoo points ----
         counts = {}
@@ -343,11 +415,17 @@ class Animals(commands.Cog):
 
         sections = [{"label": i18n.t(lang, "an_zoo_animals"), "cells": cells}]
         if food_cells:
-            sections.append({"label": i18n.t(lang, "an_inv_food"), "cells": food_cells})
+            sections.append({"label": i18n.t(lang, "an_inv_food"), "cells": food_cells,
+                             "ring": (255, 130, 130)})
         if shard_cells:
-            sections.append({"label": i18n.t(lang, "an_inv_shards"), "cells": shard_cells})
+            sections.append({"label": i18n.t(lang, "an_inv_shards"), "cells": shard_cells,
+                             "ring": (130, 200, 255)})
         if abil_cells:
-            sections.append({"label": i18n.t(lang, "an_inv_abilities"), "cells": abil_cells})
+            sections.append({"label": i18n.t(lang, "an_inv_abilities"), "cells": abil_cells,
+                             "ring": (255, 220, 120)})
+        for s in sections:
+            for c in s["cells"]:
+                c.setdefault("ring", s.get("ring"))
 
         footer = f"🏅 {i18n.t(lang, 'an_zoo_points_short')}: {points:,}  |  {rarity_line}  |  " \
                  + i18n.t(lang, "an_zoo_footer", n=len(animals), prefix=ctx.clean_prefix)

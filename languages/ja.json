@@ -325,7 +325,7 @@
   "an_fight_winner": "{emoji} **{name}**が {user} のために勝利！\n賭け金獲得：**{wager}**",
   "an_level_up": "🎉 {emoji} **{name}**が **レベル{level}** に到達！ステータス+8%！",
   "an_fight_tired": "戦いの後は空腹：{w_emoji} と {l_emoji} は1 ❤️減 — エサをあげよう！",
-  "an_shop_animals": "🐾 動物ストア（レアのみ）",
+  "an_shop_animals": "🐾 動物ストア",
   "an_shop_food": "🍔 フードストア（パワー回復）",
   "an_shop_abilities": "✨ アビリティストア（1体最大3つ）",
   "an_shop_hint": "🐾 こちらも：`{prefix}shop animals` • `{prefix}shop food` • `{prefix}shop abilities`",

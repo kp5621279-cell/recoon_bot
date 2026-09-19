@@ -325,7 +325,7 @@
   "an_fight_winner": "{emoji} **{name}** يفوز لصالح {user}!\nالرهان المكتسب: **{wager}**",
   "an_level_up": "🎉 {emoji} **{name}** وصل إلى **المستوى {level}**! صفات +8%!",
   "an_fight_tired": "جوع بعد القتال: {w_emoji} و {l_emoji} يفقدان 1 ❤️ — أطعمهما!",
-  "an_shop_animals": "🐾 متجر الحيوانات (نادرة فقط)",
+  "an_shop_animals": "🐾 متجر الحيوانات",
   "an_shop_food": "🍔 متجر الطعام (استعادة القوة)",
   "an_shop_abilities": "✨ متجر القدرات (3 كحد أقصى لكل حيوان)",
   "an_shop_hint": "🐾 متوفر أيضاً: `{prefix}shop animals` • `{prefix}shop food` • `{prefix}shop abilities`",

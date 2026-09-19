@@ -325,7 +325,7 @@
   "an_fight_winner": "{emoji} **{name}** gagne pour {user} !\nMise remportée : **{wager}**",
   "an_level_up": "🎉 {emoji} **{name}** a atteint le **Niveau {level}** ! Stats +8% !",
   "an_fight_tired": "Faim après le combat : {w_emoji} et {l_emoji} perdent 1 ❤️ — nourrissez-les !",
-  "an_shop_animals": "🐾 Boutique d'animaux (rares uniquement)",
+  "an_shop_animals": "🐾 Boutique d'animaux",
   "an_shop_food": "🍔 Boutique de nourriture (restaure la puissance)",
   "an_shop_abilities": "✨ Boutique de capacités (3 max par animal)",
   "an_shop_hint": "🐾 Aussi : `{prefix}shop animals` • `{prefix}shop food` • `{prefix}shop abilities`",

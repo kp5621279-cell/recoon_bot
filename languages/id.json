@@ -325,7 +325,7 @@
   "an_fight_winner": "{emoji} **{name}** menang untuk {user}!\nTaruhan dimenangkan: **{wager}**",
   "an_level_up": "🎉 {emoji} **{name}** mencapai **Level {level}**! Stat +8%!",
   "an_fight_tired": "Lapar setelah bertarung: {w_emoji} dan {l_emoji} kehilangan 1 ❤️ — beri makan!",
-  "an_shop_animals": "🐾 Toko Hewan (hanya langka)",
+  "an_shop_animals": "🐾 Toko Hewan",
   "an_shop_food": "🍔 Toko Makanan (pulihkan daya)",
   "an_shop_abilities": "✨ Toko Kemampuan (maks 3 per hewan)",
   "an_shop_hint": "🐾 Juga ada: `{prefix}shop animals` • `{prefix}shop food` • `{prefix}shop abilities`",
