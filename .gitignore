@@ -1,0 +1,27 @@
+# Virtual environment
+venv/
+
+# Secrets
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Big binary (GitHub 100MB limit se bada) - locally rakho
+ffmpeg.exe
+
+# Live bot database - push nahi karna
+bot_data.db
+
+# Freebuff local files
+.freebuff/
