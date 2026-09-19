@@ -92,5 +92,7 @@
   "bet_label": "下注",
   "multiplier_label": "倍数",
   "cashout_label": "取现",
-  "tiles_label": "格子"
+  "tiles_label": "格子",
+  "m_playlist_loaded": "🎵 **{title}** — 已将 **{count} 首歌** 加入队列！",
+  "m_playlist_empty": "❌ 播放列表为空或为私人。"
 }

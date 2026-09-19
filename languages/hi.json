@@ -92,5 +92,7 @@
   "bet_label": "Bet",
   "multiplier_label": "Multiplier",
   "cashout_label": "Cash Out",
-  "tiles_label": "Tiles"
+  "tiles_label": "Tiles",
+  "m_playlist_loaded": "🎵 **{title}** — **{count} songs** queue me lag gaye!",
+  "m_playlist_empty": "❌ Playlist khali hai ya private hai."
 }

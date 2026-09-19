@@ -5,6 +5,7 @@ import asyncio
 import time
 
 import database
+import i18n
 
 # Banner image URL (Discord CDN for emoji 473)
 BANNER_URL = "https://cdn.discordapp.com/emojis/1550526211388612608.png?size=512"
@@ -374,6 +375,59 @@ class Music(commands.Cog):
             await self._set_voice_status(ctx.guild, None)
             self.play_next(ctx)
 
+    async def _handle_playlist(self, ctx, voice_client, url):
+        """Playlist link: saare songs (max 50) queue me, pehla turant bajao.
+
+        Har song ko 'ytsearch1:<title>' ke roop me queue karte hain - ise
+        play ke waqt resolve hota hai aur bot-check lage to SoundCloud
+        fallback (title search) automatically kaam karta hai.
+        """
+        lang = await database.get_lang(ctx.author.id)
+
+        def _extract():
+            opts = dict(ytdl_format_options)
+            opts["extract_flat"] = "in_playlist"  # sirf list chahiye, har video resolve nahi
+            opts["playlistend"] = 50              # safety cap
+            with yt_dlp.YoutubeDL(opts) as y:
+                return y.extract_info(url, download=False)
+
+        try:
+            data = await self.bot.loop.run_in_executor(None, _extract)
+        except Exception as e:
+            error_embed = discord.Embed(title="❌ Error", description=f"Playlist load fail: `{str(e)[:200]}`", color=discord.Color.red())
+            error_embed.set_thumbnail(url=BANNER_URL)
+            return await ctx.send(embed=error_embed)
+
+        entries = [e for e in (data or {}).get("entries") or [] if e]
+        pl_title = (data or {}).get("title") or "Playlist"
+        queries = []
+        for e in entries:
+            if e.get("title"):
+                queries.append(f"ytsearch1:{e['title']}")
+            elif e.get("url"):
+                queries.append(e["url"])
+
+        if not queries:
+            error_embed = discord.Embed(title="❌ Error", description=i18n.t(lang, "m_playlist_empty"), color=discord.Color.red())
+            error_embed.set_thumbnail(url=BANNER_URL)
+            return await ctx.send(embed=error_embed)
+
+        self.queues.setdefault(ctx.guild.id, [])
+        first = queries.pop(0)
+        self.queues[ctx.guild.id].extend(queries)
+
+        embed = discord.Embed(
+            title="📜 Playlist Added",
+            description=i18n.t(lang, "m_playlist_loaded", title=pl_title[:100], count=len(queries) + 1),
+            color=discord.Color.blurple(),
+        )
+        embed.set_thumbnail(url=BANNER_URL)
+        await ctx.send(embed=embed)
+
+        # Kuch baj nahi raha to pehla song turant chalu
+        if not (voice_client.is_playing() or voice_client.is_paused()):
+            await self.play_song(ctx, first)
+
     @commands.command(name="play", aliases=["p"])
     async def play(self, ctx: commands.Context, *, query: str):
         """Plays a song from YouTube/Spotify/etc or adds it to queue."""
@@ -394,6 +448,10 @@ class Music(commands.Cog):
 
         if ctx.guild.id not in self.queues:
             self.queues[ctx.guild.id] = []
+
+        # Playlist link (watch?v=..&list=.. ya playlist?list=..)? -> saare songs queue
+        if "list=" in query:
+            return await self._handle_playlist(ctx, voice_client, query)
 
         if voice_client.is_playing() or voice_client.is_paused():
             self.queues[ctx.guild.id].append(query)

@@ -92,5 +92,7 @@
   "bet_label": "Mise",
   "multiplier_label": "Multiplicateur",
   "cashout_label": "Encaisser",
-  "tiles_label": "Cases"
+  "tiles_label": "Cases",
+  "m_playlist_loaded": "🎵 **{title}** — **{count} chansons** ajoutées à la file !",
+  "m_playlist_empty": "❌ La playlist est vide ou privée."
 }

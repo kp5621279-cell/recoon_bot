@@ -92,5 +92,7 @@
   "bet_label": "ベット",
   "multiplier_label": "倍率",
   "cashout_label": "Cash Out",
-  "tiles_label": "マス"
+  "tiles_label": "マス",
+  "m_playlist_loaded": "🎵 **{title}** — **{count}曲**をキューに追加しました！",
+  "m_playlist_empty": "❌ プレイリストが空か、非公開です。"
 }

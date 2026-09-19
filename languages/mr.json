@@ -92,5 +92,7 @@
   "bet_label": "Daav",
   "multiplier_label": "Multiplier",
   "cashout_label": "Cash Out",
-  "tiles_label": "Kadya"
+  "tiles_label": "Kadya",
+  "m_playlist_loaded": "🎵 **{title}** — **{count} gaane** queue madhye gele!",
+  "m_playlist_empty": "❌ Playlist rikt aahe kinva private aahe."
 }

@@ -92,5 +92,7 @@
   "bet_label": "الرهان",
   "multiplier_label": "المضاعف",
   "cashout_label": "سحب",
-  "tiles_label": "المربعات"
+  "tiles_label": "المربعات",
+  "m_playlist_loaded": "🎵 **{title}** — تمت إضافة **{count} أغنية** إلى القائمة!",
+  "m_playlist_empty": "❌ قائمة التشغيل فارغة أو خاصة."
 }

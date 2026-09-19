@@ -92,5 +92,7 @@
   "bet_label": "Bet",
   "multiplier_label": "Multiplier",
   "cashout_label": "Cash Out",
-  "tiles_label": "Tiles"
+  "tiles_label": "Tiles",
+  "m_playlist_loaded": "🎵 **{title}** — **{count} songs** added to the queue!",
+  "m_playlist_empty": "❌ Playlist is empty or private."
 }

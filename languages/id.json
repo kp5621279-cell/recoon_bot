@@ -92,5 +92,7 @@
   "bet_label": "Taruhan",
   "multiplier_label": "Multiplier",
   "cashout_label": "Cash Out",
-  "tiles_label": "Ubin"
+  "tiles_label": "Ubin",
+  "m_playlist_loaded": "🎵 **{title}** — **{count} lagu** ditambahkan ke antrean!",
+  "m_playlist_empty": "❌ Playlist kosong atau privat."
 }
