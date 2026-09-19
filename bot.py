@@ -497,6 +497,23 @@ async def on_message(message: discord.Message):
                 pass
             break  # ek notice per message kaafi hai
 
+    # 3) Message streak: din ka pehla message = streak count (daily streak bhi yahi hai)
+    try:
+        from datetime import datetime, timezone, timedelta
+        now_utc = datetime.now(timezone.utc)
+        today = now_utc.strftime("%Y-%m-%d")
+        last_day = await database.get_last_daily_day(message.author.id)
+        if last_day != today:
+            yesterday = (now_utc - timedelta(days=1)).strftime("%Y-%m-%d")
+            streak = (await database.get_daily_streak(message.author.id)) + 1 if last_day == yesterday else 1
+            await database.set_daily_streak(message.author.id, streak, today)
+            try:
+                await message.add_reaction("🔥")
+            except discord.HTTPException:
+                pass
+    except Exception:
+        pass  # streak fail hua to message flow kabhi na toote
+
     await bot.process_commands(message)
 
 _afk_since = {}  # user_id: monotonic time jab AFK laga (approx session ke liye)
@@ -1032,18 +1049,8 @@ async def daily_reward(ctx: commands.Context):
     await database.update_coins(ctx.author.id, reward)
     await database.update_daily_time(ctx.author.id, now)
 
-    # ---- Daily streak (consecutive UTC days) ----
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    from datetime import timedelta
-    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
-    last_day = await database.get_last_daily_day(ctx.author.id)
-    if last_day == yesterday:
-        streak = await database.get_daily_streak(ctx.author.id) + 1
-    elif last_day == today:
-        streak = await database.get_daily_streak(ctx.author.id)  # double-claim guard
-    else:
-        streak = 1
-    await database.set_daily_streak(ctx.author.id, streak, today)
+    # ---- Daily streak ab message-based hai: din ka pehla message on_message me hi count kar chuka hota hai ----
+    streak = await database.get_daily_streak(ctx.author.id)
 
     # Streak bonus: har din +50, max 1000 extra
     streak_bonus = min(1000, (streak - 1) * 50)
