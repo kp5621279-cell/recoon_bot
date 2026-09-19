@@ -252,5 +252,6 @@
   "lb_games_val": "{n}ゲームプレイ",
   "lb_empty": "このランキングにはまだ誰もいません——最初になろう！",
   "lb_footer": "ドロップダウンでカテゴリを切替 • {prefix}top",
-  "help_swipe": "◀️ ▶️ でページを切り替え"
+  "help_swipe": "◀️ ▶️ でページを切り替え",
+  "lb_unknown_user": "{mention}"
 }

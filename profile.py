@@ -265,6 +265,26 @@ class LeaderboardView(discord.ui.View):
         self.ctx = ctx
         self.lang = lang
         self.message = None
+        self._name_cache = {}  # uid -> display name (fetch ek hi baar)
+
+    async def _display_name(self, uid: int) -> str:
+        if uid in self._name_cache:
+            return self._name_cache[uid]
+        name = None
+        guild = self.ctx.guild
+        if guild:
+            member = guild.get_member(uid)
+            if member is None:
+                try:
+                    member = await guild.fetch_member(uid)  # cache me nahi to REST se
+                except (discord.NotFound, discord.HTTPException):
+                    member = None
+            if member:
+                name = member.display_name
+        if not name:
+            name = i18n.t(self.lang, "lb_unknown_user", mention=f"<@{uid}>")
+        self._name_cache[uid] = name
+        return name
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.ctx.author.id:
@@ -318,8 +338,7 @@ class LeaderboardView(discord.ui.View):
 
         lines = []
         for i, (uid, val) in enumerate(entries, start=1):
-            member = self.ctx.guild.get_member(uid) if self.ctx.guild else None
-            name = member.display_name if member else f"User {uid}"
+            name = await self._display_name(uid)
             medal = self.MEDALS.get(str(i), f"`#{i}`")
             lines.append(f"{medal} **{name}** — {fmt(val)}")
         embed.description = "\n".join(lines)

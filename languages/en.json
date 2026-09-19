@@ -272,5 +272,6 @@
   "lb_games_val": "{n} games played",
   "lb_empty": "Nobody is on this leaderboard yet — be the first!",
   "lb_footer": "Switch category from the dropdown • {prefix}top",
-  "help_swipe": "Swipe pages with ◀️ ▶️"
+  "help_swipe": "Swipe pages with ◀️ ▶️",
+  "lb_unknown_user": "{mention}"
 }

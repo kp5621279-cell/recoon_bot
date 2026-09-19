@@ -140,6 +140,10 @@ class CustomHelpCommand(commands.HelpCommand):
             if desc == f"h_{command.name}":
                 desc = command.short_doc
             cmd_info = f"**{p}{command.name}** - {desc}"
+            # short forms dikhao: play/p, coin/c, luck/lk (chhote aliases hi)
+            aliases = [a for a in command.aliases if len(a) <= 4][:2]
+            if aliases:
+                cmd_info = f"**{p}{command.name}/{'/'.join(aliases)}** - {desc}"
             if getattr(command, "module", "") == "gifs":
                 # saare gif/roleplay commands (dynamic) Fun page me
                 fun_cmds.append(cmd_info)
@@ -150,7 +154,7 @@ class CustomHelpCommand(commands.HelpCommand):
                 econ_cmds.append(cmd_info)
             elif command.name in ["ping", "help", "invite", "lang", "set"]:
                 config_cmds.append(cmd_info)
-            elif command.name in ["play", "join", "leave", "stop", "skip"]:
+            elif command.name in ["play", "join", "leave", "stop", "skip", "p"]:
                 music_cmds.append(cmd_info)
             elif command.name == "ds":
                 # ds admin-only hai - sirf admins/owner ko dikhao

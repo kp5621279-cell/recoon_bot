@@ -252,5 +252,6 @@
   "lb_games_val": "{n} गेम्स खेळले",
   "lb_empty": "या लीडरबोर्डवर अजून कोणी नाही — पहिले तू बन!",
   "lb_footer": "ड्रॉपडाउनमधून कॅटेगरी बदल • {prefix}top",
-  "help_swipe": "◀️ ▶️ नी पेज बदल"
+  "help_swipe": "◀️ ▶️ नी पेज बदल",
+  "lb_unknown_user": "{mention}"
 }
