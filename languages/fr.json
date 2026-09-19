@@ -350,5 +350,9 @@
   "h_shop": "Ouvrez la boutique - bannieres, animaux, nourriture, capacites.",
   "h_top": "Classements du serveur - niveau, pieces, serie, parties.",
   "h_equipb": "Equipez une banniere possedee : equipb 3",
-  "h_links": "Affiche la liste des liens sauvegardes."
+  "h_links": "Affiche la liste des liens sauvegardes.",
+  "an_zoo_points": "🏅 Points de zoo : {points}",
+  "an_inv_food": "🍖 Nourriture",
+  "an_inv_shards": "💠 Éclats",
+  "an_inv_abilities": "⚡ Capacités"
 }

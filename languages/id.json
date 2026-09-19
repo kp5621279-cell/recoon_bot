@@ -350,5 +350,9 @@
   "h_shop": "Buka toko - banner, hewan, makanan, ability.",
   "h_top": "Papan peringkat server - level, koin, streak, game.",
   "h_equipb": "Pakai banner milikmu: equipb 3",
-  "h_links": "Tampilkan daftar link yang disimpan."
+  "h_links": "Tampilkan daftar link yang disimpan.",
+  "an_zoo_points": "🏅 Poin Kebun Binatang: {points}",
+  "an_inv_food": "🍖 Makanan",
+  "an_inv_shards": "💠 Shard",
+  "an_inv_abilities": "⚡ Ability"
 }

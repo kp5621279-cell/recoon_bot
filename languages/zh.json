@@ -350,5 +350,9 @@
   "h_shop": "打开商店 - 横幅、动物、食物、能力。",
   "h_top": "服务器排行榜 - 等级、金币、连胜、游戏。",
   "h_equipb": "装备你拥有的横幅：equipb 3",
-  "h_links": "显示已保存的链接列表。"
+  "h_links": "显示已保存的链接列表。",
+  "an_zoo_points": "🏅 动物园积分：{points}",
+  "an_inv_food": "🍖 食物",
+  "an_inv_shards": "💠 碎片",
+  "an_inv_abilities": "⚡ 能力"
 }

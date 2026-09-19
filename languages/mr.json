@@ -350,5 +350,9 @@
   "h_shop": "Dukan ughada - banner, prani, khane, kshamata.",
   "h_top": "Server leaderboard - level, nani, satatya, game.",
   "h_equipb": "Tumche banner lava: equipb 3",
-  "h_links": "Save kelele links list dakhva."
+  "h_links": "Save kelele links list dakhva.",
+  "an_zoo_points": "🏅 प्राणी गुण: {points}",
+  "an_inv_food": "🍖 खाणे",
+  "an_inv_shards": "💠 शार्ड",
+  "an_inv_abilities": "⚡ क्षमता"
 }

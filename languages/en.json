@@ -370,5 +370,9 @@
   "h_shop": "Open the shop - banners, animals, food, abilities.",
   "h_top": "Server leaderboards - level, coins, streak, games.",
   "h_equipb": "Equip a banner you own: equipb 3",
-  "h_links": "Show the saved media links list."
+  "h_links": "Show the saved media links list.",
+  "an_zoo_points": "🏅 Zoo Points: {points}",
+  "an_inv_food": "🍖 Food",
+  "an_inv_shards": "💠 Shards",
+  "an_inv_abilities": "⚡ Abilities"
 }

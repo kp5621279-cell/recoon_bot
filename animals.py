@@ -195,35 +195,70 @@ class Animals(commands.Cog):
 
     # ---------------- commands ----------------
 
-    @commands.command(name="zoo", aliases=["animals", "collection"])
+    @commands.command(name="zoo", aliases=["animals", "collection", "inv", "inventory", "bag"])
     async def zoo(self, ctx: commands.Context, member: discord.Member = None):
-        """Apna (ya kisi aur ka) animal collection dekho."""
+        """Apna (ya kisi aur ka) zoo + inventory ek compact card me dekho."""
         member = member or ctx.author
         lang = await database.get_lang(ctx.author.id)
         animals = await database.get_user_animals(member.id)
-        if not animals:
-            return await ctx.send(i18n.t(lang, "an_empty", prefix=ctx.clean_prefix,
-                                         mention=ctx.author.mention))
         active = await database.get_active_animal(member.id)
-        lines = []
+
+        # ---- emoji grid: species-wise counts (OwO style) ----
+        if animals:
+            seen = {}
+            for a in animals:
+                sid = a["species"]["id"]
+                ent = seen.setdefault(sid, {"emoji": a["species"]["emoji"], "n": 0, "star": False})
+                ent["n"] += 1
+                if active and a["id"] == active["id"]:
+                    ent["star"] = True
+            cells = [e["emoji"] + (str(e["n"]) if e["n"] > 1 else "") + ("⭐" if e["star"] else "")
+                     for e in seen.values()]
+            rows = [" ".join(cells[i:i + 8]) for i in range(0, len(cells), 8)]
+            if len(rows) > 12:
+                rows = rows[:12] + ["…"]
+            grid = "\n".join(rows)
+        else:
+            grid = i18n.t(lang, "an_empty", prefix=ctx.clean_prefix, mention=member.mention)
+
+        # ---- rarity summary + zoo points ----
         counts = {}
+        points = 0
         for a in animals:
-            meta = RARITY_META.get(a["species"]["rarity"], RARITY_META["common"])
-            counts[a["species"]["rarity"]] = counts.get(a["species"]["rarity"], 0) + 1
-            mark = " ⭐" if active and a["id"] == active["id"] else ""
-            lines.append(
-                f"`a{a['id']}` {a['species']['emoji']} **{animal_name(a)}** "
-                f"{meta['emoji']}Lv{a['level']} — {hunger_bar(a['hunger'])}{mark}"
-            )
+            r = a["species"]["rarity"]
+            counts[r] = counts.get(r, 0) + 1
+            points += RARITY_META.get(r, RARITY_META["common"])["hp"] * a["level"]
         rarity_line = " • ".join(
-            f"{RARITY_META[r]['emoji']}{n}" for r, n in
-            sorted(counts.items(), key=lambda kv: RARITY_ORDER.index(kv[0]))
+            f"{code}-{counts.get(r, 0)}" for r, code in zip(RARITY_ORDER, ("C", "U", "R", "M", "G"))
         )
+
+        # ---- inventory sections (category-wise) ----
+        items = await database.inv_all(member.id)
+        food_parts = [f"{FOODS[iid]['emoji']}{qty}" for itype, iid, qty in items
+                      if itype == "food" and iid in FOODS]
+        shard_parts = [f"{SHARD_ICON}×{qty}" for itype, iid, qty in items
+                       if itype == "shard" and iid == "fuzon"]
+        abil_parts = [f"{ABILITIES[iid]['emoji']}{qty}" for itype, iid, qty in items
+                      if itype == "ability" and iid in ABILITIES]
+        inv_lines = []
+        if food_parts:
+            inv_lines.append(i18n.t(lang, "an_inv_food") + ": " + " • ".join(food_parts))
+        if shard_parts:
+            inv_lines.append(i18n.t(lang, "an_inv_shards") + ": " + " • ".join(shard_parts))
+        if abil_parts:
+            inv_lines.append(i18n.t(lang, "an_inv_abilities") + ": " + " • ".join(abil_parts))
+
+        desc = (grid + "\n\n" + i18n.t(lang, "an_zoo_points", points=f"{points:,}")
+                + "\n" + rarity_line)
+        if inv_lines:
+            desc += "\n\n" + "\n".join(inv_lines)
+
         embed = discord.Embed(
             title=i18n.t(lang, "an_zoo_title", user=member.display_name),
-            description=f"{rarity_line}\n\n" + "\n".join(lines[:25]),
+            description=desc,
             color=discord.Color.green(),
         )
+        embed.set_thumbnail(url=BANNER_URL)
         embed.set_footer(text=i18n.t(lang, "an_zoo_footer", n=len(animals),
                                      prefix=ctx.clean_prefix))
         await ctx.send(embed=embed)
@@ -388,28 +423,6 @@ class Animals(commands.Cog):
                               dfn=stat_of(baby, "def"),
                               p1=animal_name(parents[0]), p2=animal_name(parents[1]),
                               mention=ctx.author.mention))
-
-    @commands.command(name="inv", aliases=["inventory", "bag"])
-    async def inv(self, ctx: commands.Context):
-        """Inventory: food, shards, abilities."""
-        lang = await database.get_lang(ctx.author.id)
-        items = await database.inv_all(ctx.author.id)
-        if not items:
-            return await ctx.send(i18n.t(lang, "an_inv_empty", prefix=ctx.clean_prefix,
-                                         mention=ctx.author.mention))
-        lines = []
-        for itype, iid, qty in items:
-            if itype == "shard" and iid == "fuzon":
-                lines.append(f"{SHARD_ICON} **{SHARD_NAME}** ×{qty}")
-            elif itype == "food" and iid in FOODS:
-                f = FOODS[iid]
-                lines.append(f"{f['emoji']} **{f['name']}** ×{qty} (+{f['hearts']}❤️)")
-            elif itype == "ability" and iid in ABILITIES:
-                ab = ABILITIES[iid]
-                lines.append(f"{ab['emoji']} **{ab['name']}** ×{qty} — {ab['desc']}")
-        embed = discord.Embed(title=i18n.t(lang, "an_inv_title"),
-                              description="\n".join(lines) or "—", color=discord.Color.teal())
-        await ctx.send(embed=embed)
 
     @commands.command(name="ability")
     async def ability(self, ctx: commands.Context, animal_ref: str = None, ability_id: str = None):

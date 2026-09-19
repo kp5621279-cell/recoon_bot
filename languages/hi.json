@@ -370,5 +370,9 @@
   "h_shop": "Shop kholo - banners, animals, khana, abilities.",
   "h_top": "Server leaderboard - level, coins, streak, games.",
   "h_equipb": "Apna banner lagao: equipb 3",
-  "h_links": "Saved media links ki list dikhao."
+  "h_links": "Saved media links ki list dikhao.",
+  "an_zoo_points": "🏅 Zoo Points: {points}",
+  "an_inv_food": "🍖 Khana",
+  "an_inv_shards": "💠 Shards",
+  "an_inv_abilities": "⚡ Abilities"
 }
