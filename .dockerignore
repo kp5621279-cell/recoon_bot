@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.py[cod]
+.env
+bot_data.db
+ffmpeg.exe
+.freebuff/
+.git
+.vscode/
+.idea/

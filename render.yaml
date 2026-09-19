@@ -1,0 +1,17 @@
+services:
+  - type: worker            # Discord bot = Background Worker (kabhi sleep nahi hota)
+    name: recoon-bot
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter           # free plan sirf web services ke liye hai - worker paid hai
+    region: singapore
+    dockerCommand: python bot.py
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false         # Render dashboard me secret set karna
+      - key: DATA_DIR
+        value: /var/data    # persistent disk ka mount point
+    disk:
+      name: recoon-data
+      mountPath: /var/data
+      sizeGB: 1

@@ -1,7 +1,11 @@
 import aiosqlite
 import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "bot_data.db")
+# Hosted (Render) par DATA_DIR env set hota hai (persistent disk);
+# local PC par ye normal bot_data.db hi rehta hai.
+DATA_DIR = os.getenv("DATA_DIR", os.path.dirname(__file__))
+os.makedirs(DATA_DIR, exist_ok=True)
+DB_PATH = os.path.join(DATA_DIR, "bot_data.db")
 
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
