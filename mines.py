@@ -353,6 +353,66 @@ class PickTileModal(discord.ui.Modal):
         await game.pick(interaction, idx)
 
 
+class ModeSelectView(discord.ui.View):
+    """!mine <bet> ke baad mode dropdown - select karte hi game shuru."""
+
+    MODES = [
+        ("small", "Small 3x3", "3 bombs - badhiya multipliers", "🟩"),
+        ("bigt", "BigT 5x5", "5 bombs - balanced", "🟨"),
+        ("bigl", "BigL 9x9", "9 bombs - chhote multipliers, lamba khel", "🟥"),
+    ]
+
+    def __init__(self, ctx: commands.Context, bet: int):
+        super().__init__(timeout=60.0)
+        self.ctx = ctx
+        self.bet = bet
+
+    @discord.ui.select(
+        placeholder="💣 Mode chuno...",
+        min_values=1,
+        max_values=1,
+        options=[
+            discord.SelectOption(label=label, description=desc, emoji=emoji, value=value)
+            for value, label, desc, emoji in MODES
+        ],
+    )
+    async def mode_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        if interaction.user.id != self.ctx.author.id:
+            return await interaction.response.send_message("❌ Ye tumhare liye nahi hai!", ephemeral=True)
+        if self.ctx.author.id in MINES_ACTIVE:
+            return await interaction.response.send_message("❌ Pehle apna chalu game khatam karo!", ephemeral=True)
+
+        spec = select.values[0]
+        size, bombs, label = parse_spec(spec)
+        user = await database.get_user(self.ctx.author.id)
+        if not user or user["coins"] < self.bet:
+            return await interaction.response.edit_message(
+                content=f"❌ Tumhare paas itne coins nahi hain! Balance: `{user['coins'] if user else 0}`",
+                embed=None, view=None,
+            )
+
+        for child in self.children:
+            child.disabled = True
+
+        game = MinesGame(self.ctx.author.id, self.bet, size, bombs, label)
+        MINES_ACTIVE[self.ctx.author.id] = game
+        await database.update_coins(self.ctx.author.id, -self.bet)
+
+        await interaction.response.edit_message(
+            content=f"🎮 **{label}** | Bet: {self.bet} {COIN}", embed=None, view=None
+        )
+        await game.start(self.ctx)
+
+    async def on_timeout(self):
+        try:
+            for child in self.children:
+                child.disabled = True
+            if self.message:
+                await self.message.edit(content="⌛ Mode select nahi hua - game cancel.", view=self)
+        except discord.HTTPException:
+            pass
+
+
 class Mines(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -362,14 +422,28 @@ class Mines(commands.Cog):
         """💣 Mines - diamonds kholo, bomb se bacho!
 
         Usage:
-          !mine 500 small   -> 3x3 (3 bombs)
-          !mine 500 bigt    -> 5x5 (5 bombs)
-          !mine 500 bigl    -> 9x9 (9 bombs, chhote multipliers)
+          !mine 500        -> mode dropdown se chuno
+          !mine 500 small  -> direct 3x3 (3 bombs)
+          !mine 500 bigt   -> direct 5x5 (5 bombs)
+          !mine 500 bigl   -> direct 9x9 (9 bombs)
         """
         if ctx.author.id in MINES_ACTIVE:
             return await ctx.send("❌ Pehle apna chalu game khatam karo! (Board par khelo ya Cash Out karo)")
         if bet <= 0:
             return await ctx.send("❌ Bet 0 se bada hona chahiye.")
+
+        # Mode nahi diya? Dropdown dikhao - wahi se select karke game shuru
+        if spec is None:
+            user = await database.get_user(ctx.author.id)
+            if not user or user["coins"] < bet:
+                return await ctx.send(f"❌ Tumhare paas itne {COIN} nahi hain! Balance: `{user['coins'] if user else 0}`")
+            view = ModeSelectView(ctx, bet)
+            msg = await ctx.send(
+                f"💣 **Mines** | Bet: **{bet}** {COIN}\nNeeche se mode chuno - select karte hi game shuru!",
+                view=view,
+            )
+            view.message = msg
+            return
 
         parsed = parse_spec(spec)
         if parsed is None:
