@@ -80,28 +80,39 @@ class Slots(commands.Cog):
             win_amount = int(bet * mult)
 
             animation = "<a:pikuracoin20749_512:1550522369175593061>"
-            msg = await ctx.send(i18n.t(lang, "s_spinning", animation=animation))
+            msg = await ctx.send(embed=discord.Embed(
+                title=i18n.t(lang, "s_title"),
+                description=i18n.t(lang, "s_spinning", animation=animation),
+                color=discord.Color.blurple(),
+            ))
 
             await asyncio.sleep(2.0)
 
-            board = f"┃ {reels[0]} │ {reels[1]} │ {reels[2]} ┃"
+            board = f"# ┃ {reels[0]} ┃ {reels[1]} ┃ {reels[2]} ┃"
+
             if win_amount > 0:
                 await database.update_coins(ctx.author.id, win_amount)
                 new_bal = user["coins"] - bet + win_amount
-                desc = i18n.t(lang, win_key, bet=bet, coin=COIN) + "\n"
-                desc += i18n.t(lang, "s_win_amount", amount=win_amount, mult=mult, coin=COIN, balance=new_bal)
                 color = discord.Color.gold() if mult >= 9 else discord.Color.green()
+                result = i18n.t(lang, win_key, sym=reels[0])
+                payout_val = i18n.t(lang, "s_f_won", amount=win_amount, mult=mult, coin=COIN)
             else:
                 new_bal = user["coins"] - bet
-                if win_key == "slots_jackpot_eggplant":
-                    desc = i18n.t(lang, "slots_jackpot_eggplant", bet=bet, coin=COIN) + "\n"
-                else:
-                    desc = ""
-                desc += i18n.t(lang, "s_lose", bet=bet, coin=COIN, balance=new_bal)
                 color = discord.Color.red()
+                if win_key == "slots_jackpot_eggplant":
+                    result = i18n.t(lang, "slots_jackpot_eggplant")
+                else:
+                    result = i18n.t(lang, "s_f_nomatch")
+                payout_val = i18n.t(lang, "s_f_lost", bet=bet, coin=COIN)
 
-            embed = discord.Embed(title=i18n.t(lang, "s_title"), description=f"{board}\n\n{desc}", color=color)
+            embed = discord.Embed(title=i18n.t(lang, "s_title"), color=color)
             embed.set_thumbnail(url=BANNER_URL)
+            embed.add_field(name="\u200b", value=board, inline=False)
+            if win_key != "slots_lose":
+                embed.add_field(name=i18n.t(lang, "s_f_result_name"), value=result, inline=False)
+            embed.add_field(name=i18n.t(lang, "s_f_payout_name"), value=payout_val, inline=False)
+            embed.add_field(name=i18n.t(lang, "s_f_balance_name"), value=i18n.t(lang, "s_f_balance", balance=new_bal, coin=COIN), inline=False)
+            embed.set_footer(text=i18n.t(lang, "s_footer"))
             await msg.edit(content=None, embed=embed)
         finally:
             SLOTS_ACTIVE.discard(ctx.author.id)
