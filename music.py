@@ -408,7 +408,7 @@ class Music(commands.Cog):
                 queries.append(e["url"])
 
         if not queries:
-            error_embed = discord.Embed(title="❌ Error", description=i18n.t(lang, "m_playlist_empty"), color=discord.Color.red())
+            error_embed = discord.Embed(title="❌ Error", description=i18n.t(lang, "m_playlist_empty", mention=ctx.author.mention), color=discord.Color.red())
             error_embed.set_thumbnail(url=BANNER_URL)
             return await ctx.send(embed=error_embed)
 
@@ -418,7 +418,7 @@ class Music(commands.Cog):
 
         embed = discord.Embed(
             title="📜 Playlist Added",
-            description=i18n.t(lang, "m_playlist_loaded", title=pl_title[:100], count=len(queries) + 1),
+            description=i18n.t(lang, "m_playlist_loaded", title=pl_title[:100], count=len(queries) + 1, mention=ctx.author.mention),
             color=discord.Color.blurple(),
         )
         embed.set_thumbnail(url=BANNER_URL)

@@ -422,7 +422,7 @@ async def global_agreement_check(ctx: commands.Context):
     # Banned users ko sabse pehle rok do (owner chhod kar)
     if not await bot.is_owner(ctx.author) and await database.is_banned(ctx.author.id):
         lang = await database.get_lang(ctx.author.id)
-        await ctx.send(i18n.t(lang, "banned"))
+        await ctx.send(i18n.t(lang, "banned", mention=ctx.author.mention))
         raise commands.CheckFailure("User is banned.")
 
     user_data = await database.get_user(ctx.author.id)
@@ -432,7 +432,7 @@ async def global_agreement_check(ctx: commands.Context):
     # Send agreement prompt
     lang = await database.get_lang(ctx.author.id)
     view = AgreementView(ctx.author.id)
-    await ctx.send(i18n.t(lang, "welcome"), view=view)
+    await ctx.send(i18n.t(lang, "welcome", mention=ctx.author.mention), view=view)
     
     # We raise an error so the current command stops executing. 
     # The user has to run the command again after agreeing.
@@ -447,15 +447,15 @@ async def on_command_error(ctx, error):
         pass
     elif isinstance(error, commands.MissingRequiredArgument):
         lang = await database.get_lang(ctx.author.id)
-        await ctx.send(i18n.t(lang, "missing_arg", param=error.param.name))
+        await ctx.send(i18n.t(lang, "missing_arg", param=error.param.name, mention=ctx.author.mention))
     elif isinstance(error, commands.BadArgument):
         lang = await database.get_lang(ctx.author.id)
-        await ctx.send(i18n.t(lang, "bad_arg"))
+        await ctx.send(i18n.t(lang, "bad_arg", mention=ctx.author.mention))
     elif isinstance(error, commands.CommandInvokeError) and isinstance(error.original, discord.Forbidden):
         print(f"Missing permissions: {error.original}")
         try:
             lang = await database.get_lang(ctx.author.id)
-            await ctx.send(i18n.t(lang, "no_perm_bot"))
+            await ctx.send(i18n.t(lang, "no_perm_bot", mention=ctx.author.mention))
         except discord.HTTPException:
             pass  # channel me bolne ki bhi permission nahi - kuch aur nahi kar sakta
     else:
@@ -487,14 +487,14 @@ async def set_prefix(ctx: commands.Context, new_prefix: str):
 async def ping(ctx: commands.Context) -> None:
     """Check bot latency."""
     lang = await database.get_lang(ctx.author.id)
-    await ctx.send(i18n.t(lang, "ping", ms=round(bot.latency * 1000)))
+    await ctx.send(i18n.t(lang, "ping", ms=round(bot.latency * 1000), mention=ctx.author.mention))
 
 @bot.command(name="invite", aliases=["add"])
 async def invite(ctx: commands.Context):
     """Get the invite link for this bot."""
     lang = await database.get_lang(ctx.author.id)
     link = "https://discord.com/oauth2/authorize?client_id=1550499489414909972&permissions=5454653866506561&integration_type=0&scope=bot"
-    await ctx.send(i18n.t(lang, "invite", link=link))
+    await ctx.send(i18n.t(lang, "invite", link=link, mention=ctx.author.mention))
 
 @bot.group(name="ds", invoke_without_command=True)
 @commands.has_permissions(manage_guild=True)
@@ -662,12 +662,12 @@ async def coin_flip(ctx: commands.Context, bet: int, choice: str = None):
     lang = await database.get_lang(ctx.author.id)
 
     if bet <= 0:
-        await ctx.send(i18n.t(lang, "coin_bet_invalid"))
+        await ctx.send(i18n.t(lang, "coin_bet_invalid", mention=ctx.author.mention))
         return
 
     user_data = await database.get_user(ctx.author.id)
     if not user_data or user_data["coins"] < bet:
-        await ctx.send(i18n.t(lang, "coin_not_enough", coin=COIN, balance=user_data['coins'] if user_data else 0))
+        await ctx.send(i18n.t(lang, "coin_not_enough", coin=COIN, balance=user_data['coins'] if user_data else 0, mention=ctx.author.mention))
         return
 
     # default random choice if user didn't pick
@@ -676,14 +676,14 @@ async def coin_flip(ctx: commands.Context, bet: int, choice: str = None):
     if choice:
         choice = choice.lower()
         if choice not in valid_choices:
-            await ctx.send(i18n.t(lang, "coin_invalid_choice"))
+            await ctx.send(i18n.t(lang, "coin_invalid_choice", mention=ctx.author.mention))
             return
         user_choice_is_heads = choice in ["h", "head", "heads"]
     else:
         # If user didn't pick, randomly assign them one
         user_choice_is_heads = secrets.choice([True, False])
         side = "Heads" if user_choice_is_heads else "Tails"
-        await ctx.send(i18n.t(lang, "coin_no_side", side=side))
+        await ctx.send(i18n.t(lang, "coin_no_side", side=side, mention=ctx.author.mention))
 
     # Deduct bet temporarily (if they lose, it's gone; if they win, we add 2x bet)
     await database.update_coins(ctx.author.id, -bet)
@@ -698,7 +698,7 @@ async def coin_flip(ctx: commands.Context, bet: int, choice: str = None):
     animation = "<a:pikuracoin20749_512:1550522369175593061>"
     win_anim = "<a:grabill54congratulations13773_51:1550523083373416609>"
     
-    msg = await ctx.send(i18n.t(lang, "coin_flipping", animation=animation))
+    msg = await ctx.send(i18n.t(lang, "coin_flipping", animation=animation, mention=ctx.author.mention))
     
     import asyncio
     await asyncio.sleep(2.0) # simulate flip time
@@ -707,10 +707,10 @@ async def coin_flip(ctx: commands.Context, bet: int, choice: str = None):
         winnings = bet * 2
         await database.update_coins(ctx.author.id, winnings)
         new_balance = user_data['coins'] + bet
-        await msg.edit(content=i18n.t(lang, "coin_win", win_anim=win_anim, side=result_side, amount=bet, coin=COIN, balance=new_balance))
+        await msg.edit(content=i18n.t(lang, "coin_win", win_anim=win_anim, side=result_side, amount=bet, coin=COIN, balance=new_balance, mention=ctx.author.mention))
     else:
         new_balance = user_data['coins'] - bet
-        await msg.edit(content=i18n.t(lang, "coin_lose", side=result_side, amount=bet, coin=COIN, balance=new_balance))
+        await msg.edit(content=i18n.t(lang, "coin_lose", side=result_side, amount=bet, coin=COIN, balance=new_balance, mention=ctx.author.mention))
 
 @bot.command(name="req", aliases=["request"])
 async def request_coins(ctx: commands.Context, amount: int, target: discord.Member):
@@ -721,21 +721,21 @@ async def request_coins(ctx: commands.Context, amount: int, target: discord.Memb
     """
     lang = await database.get_lang(ctx.author.id)
     if amount <= 0:
-        return await ctx.send(i18n.t(lang, "amount_invalid"))
+        return await ctx.send(i18n.t(lang, "amount_invalid", mention=ctx.author.mention))
 
     if target.bot:
-        return await ctx.send(i18n.t(lang, "no_bot_target"))
+        return await ctx.send(i18n.t(lang, "no_bot_target", mention=ctx.author.mention))
     if target.id == ctx.author.id:
-        return await ctx.send(i18n.t(lang, "no_self_target"))
+        return await ctx.send(i18n.t(lang, "no_self_target", mention=ctx.author.mention))
 
     lang = await database.get_lang(ctx.author.id)
     target_data = await database.get_user(target.id)
     if not target_data or not target_data["agreed"]:
-        return await ctx.send(i18n.t(lang, "not_agreed", user=target.display_name))
+        return await ctx.send(i18n.t(lang, "not_agreed", user=target.display_name, mention=ctx.author.mention))
 
     key = (ctx.author.id, target.id)
     if key in PENDING_REQUESTS:
-        return await ctx.send(i18n.t(lang, "pending_req", user=target.display_name))
+        return await ctx.send(i18n.t(lang, "pending_req", user=target.display_name, mention=ctx.author.mention))
 
     view = CoinRequestView(ctx.author, target, amount)
     try:
@@ -743,12 +743,13 @@ async def request_coins(ctx: commands.Context, amount: int, target: discord.Memb
             embed=coin_request_embed(ctx.author, amount, target_data["coins"]), view=view
         )
     except discord.Forbidden:
-        return await ctx.send(i18n.t(lang, "dm_closed", user=target.display_name))
+        return await ctx.send(i18n.t(lang, "dm_closed", user=target.display_name, mention=ctx.author.mention))
 
     PENDING_REQUESTS.add(key)
     await ctx.send(i18n.t(
         await database.get_lang(ctx.author.id), "req_sent",
         receiver=target.display_name, amount=amount, coin=COIN,
+        mention=ctx.author.mention,
     ))
 
 
@@ -761,12 +762,12 @@ async def pay_coins(ctx: commands.Context, amount: int, target: discord.Member):
     """
     lang = await database.get_lang(ctx.author.id)
     if amount <= 0:
-        return await ctx.send(i18n.t(lang, "amount_invalid"))
+        return await ctx.send(i18n.t(lang, "amount_invalid", mention=ctx.author.mention))
 
     if target.bot:
-        return await ctx.send(i18n.t(lang, "no_bot_target"))
+        return await ctx.send(i18n.t(lang, "no_bot_target", mention=ctx.author.mention))
     if target.id == ctx.author.id:
-        return await ctx.send(i18n.t(lang, "no_self_target"))
+        return await ctx.send(i18n.t(lang, "no_self_target", mention=ctx.author.mention))
 
     sender_data = await database.get_user(ctx.author.id)
     if not sender_data or sender_data["coins"] < amount:
@@ -801,7 +802,7 @@ async def check_balance(ctx: commands.Context):
     f"""Check your {COIN} balance."""
     lang = await database.get_lang(ctx.author.id)
     user_data = await database.get_user(ctx.author.id)
-    await ctx.send(i18n.t(lang, "bal", coins=user_data['coins'], coin=COIN))
+    await ctx.send(i18n.t(lang, "bal", coins=user_data['coins'], coin=COIN, mention=ctx.author.mention))
 
 @bot.command(name="daily")
 async def daily_reward(ctx: commands.Context):
@@ -820,7 +821,7 @@ async def daily_reward(ctx: commands.Context):
         time_left = int(cooldown - (now - last_daily))
         hours = time_left // 3600
         minutes = (time_left % 3600) // 60
-        await ctx.send(i18n.t(lang, "daily_wait", time=f"{hours}h {minutes}m"))
+        await ctx.send(i18n.t(lang, "daily_wait", time=f"{hours}h {minutes}m", mention=ctx.author.mention))
         return
 
     import secrets
@@ -830,7 +831,7 @@ async def daily_reward(ctx: commands.Context):
     await database.update_daily_time(ctx.author.id, now)
     
     new_bal = user_data["coins"] + reward
-    await ctx.send(i18n.t(lang, "daily_given", amount=reward, coin=COIN, balance=new_bal))
+    await ctx.send(i18n.t(lang, "daily_given", amount=reward, coin=COIN, balance=new_bal, mention=ctx.author.mention))
 
 def main() -> None:
     if not DISCORD_TOKEN:

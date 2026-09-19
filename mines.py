@@ -93,6 +93,11 @@ class MinesGame:
     def cleanup(self):
         MINES_ACTIVE.pop(self.player_id, None)
 
+    @property
+    def mention(self) -> str:
+        """Player ka mention - notes me user ko tag karne ke liye."""
+        return f"<@{self.player_id}>"
+
     # ------------------- rendering helpers -------------------
 
     def control_embed(self, note: str = None) -> discord.Embed:
@@ -201,16 +206,16 @@ class MinesGame:
 
         result = self.open_tile(idx)
         if result == "gone":
-            return await interaction.response.send_message("❌ Ye tile already khul chuka hai.", ephemeral=True)
+            return await interaction.response.send_message(i18n.t(self.lang, "m_pick_open", mention=f"<@{interaction.user.id}>"), ephemeral=True)
 
         if result == "bomb":
-            note = i18n.t(self.lang, "m_bomb", bet=self.bet, coin=COIN)
+            note = i18n.t(self.lang, "m_bomb", bet=self.bet, coin=COIN, mention=self.mention)
             return await self._end_edits(interaction, note)
 
         if result == "autowin":
             amount = self.cashout_amount()
             await database.update_coins(self.player_id, amount)
-            note = i18n.t(self.lang, "m_autowin", amount=amount, coin=COIN)
+            note = i18n.t(self.lang, "m_autowin", amount=amount, coin=COIN, mention=self.mention)
             return await self._end_edits(interaction, note)
 
         # safe pick: button ko gem bana do
@@ -229,7 +234,7 @@ class MinesGame:
 
     async def cashout(self, interaction: discord.Interaction):
         if interaction.user.id != self.player_id:
-            return await interaction.response.send_message("❌ Ye game tumhara nahi hai!", ephemeral=True)
+            return await interaction.response.send_message(i18n.t(self.lang, "m_not_yours", mention=f"<@{interaction.user.id}>"), ephemeral=True)
         if self.over:
             return await interaction.response.send_message("❌ Game khatam ho chuka hai.", ephemeral=True)
 
@@ -237,12 +242,12 @@ class MinesGame:
             # kuch khola hi nahi - bet wapas
             self.over = True
             await database.update_coins(self.player_id, self.bet)
-            return await self._end_edits(interaction, i18n.t(self.lang, "m_cashout_zero", bet=self.bet, coin=COIN))
+            return await self._end_edits(interaction, i18n.t(self.lang, "m_cashout_zero", bet=self.bet, coin=COIN, mention=self.mention))
 
         self.over = True
         amount = self.cashout_amount()
         await database.update_coins(self.player_id, amount)
-        note = i18n.t(self.lang, "m_cashout", picks=self.picks, amount=amount, coin=COIN, mult=f"{self.multiplier():.2f}")
+        note = i18n.t(self.lang, "m_cashout", picks=self.picks, amount=amount, coin=COIN, mult=f"{self.multiplier():.2f}", mention=self.mention)
         await self._end_edits(interaction, note)
 
     async def finish_timeout(self):
@@ -252,11 +257,11 @@ class MinesGame:
         self.over = True
         if self.picks == 0:
             await database.update_coins(self.player_id, self.bet)
-            note = i18n.t(self.lang, "m_timeout_zero", bet=self.bet, coin=COIN)
+            note = i18n.t(self.lang, "m_timeout_zero", bet=self.bet, coin=COIN, mention=self.mention)
         else:
             amount = self.cashout_amount()
             await database.update_coins(self.player_id, amount)
-            note = i18n.t(self.lang, "m_timeout_cash", amount=amount, coin=COIN, mult=f"{self.multiplier():.2f}")
+            note = i18n.t(self.lang, "m_timeout_cash", amount=amount, coin=COIN, mult=f"{self.multiplier():.2f}", mention=self.mention)
         self._disable_all()
         self._reveal_bombs_on_buttons()
         try:
@@ -351,7 +356,7 @@ class PickTileModal(discord.ui.Modal):
         r, c = raw[0], raw[1:]
         if r not in LETTERS[: game.size] or not c.isdigit() or not (1 <= int(c) <= game.size):
             return await interaction.response.send_message(
-                i18n.t(game.lang, "m_pick_bad", rows=LETTERS[: game.size], size=game.size),
+                i18n.t(game.lang, "m_pick_bad", rows=LETTERS[: game.size], size=game.size, mention=f"<@{interaction.user.id}>"),
                 ephemeral=True,
             )
         idx = LETTERS.index(r) * game.size + (int(c) - 1)
@@ -371,6 +376,7 @@ class ModeSelectView(discord.ui.View):
         super().__init__(timeout=60.0)
         self.ctx = ctx
         self.bet = bet
+        self.message = None  # dropdown wala message
 
     @discord.ui.select(
         placeholder="💣 Mode chuno...",
@@ -383,9 +389,9 @@ class ModeSelectView(discord.ui.View):
     )
     async def mode_select(self, interaction: discord.Interaction, select: discord.ui.Select):
         if interaction.user.id != self.ctx.author.id:
-            return await interaction.response.send_message(i18n.t("en", "m_mode_not_you"), ephemeral=True)
+            return await interaction.response.send_message(i18n.t("en", "m_mode_not_you", mention=interaction.user.mention), ephemeral=True)
         if self.ctx.author.id in MINES_ACTIVE:
-            return await interaction.response.send_message(i18n.t("en", "m_mode_active"), ephemeral=True)
+            return await interaction.response.send_message(i18n.t("en", "m_mode_active", mention=interaction.user.mention), ephemeral=True)
 
         spec = select.values[0]
         size, bombs, label = parse_spec(spec)
@@ -393,7 +399,7 @@ class ModeSelectView(discord.ui.View):
         if not user or user["coins"] < self.bet:
             bal = user["coins"] if user else 0
             return await interaction.response.edit_message(
-                content=i18n.t("en", "m_mode_poor", balance=bal),
+                content=i18n.t("en", "m_mode_poor", balance=bal, mention=self.ctx.author.mention),
                 embed=None, view=None,
             )
 
@@ -415,7 +421,7 @@ class ModeSelectView(discord.ui.View):
                 child.disabled = True
             if self.message:
                 lang = await database.get_lang(self.ctx.author.id)
-                await self.message.edit(content=i18n.t(lang, "m_mode_cancel"), view=self)
+                await self.message.edit(content=i18n.t(lang, "m_mode_cancel", mention=self.ctx.author.mention), view=self)
         except discord.HTTPException:
             pass
 
@@ -435,19 +441,19 @@ class Mines(commands.Cog):
           !mine 500 bigl   -> direct 9x9 (9 bombs)
         """
         if ctx.author.id in MINES_ACTIVE:
-            return await ctx.send(i18n.t(await database.get_lang(ctx.author.id), "m_one_game"))
+            return await ctx.send(i18n.t(await database.get_lang(ctx.author.id), "m_one_game", mention=ctx.author.mention))
         if bet <= 0:
-            return await ctx.send(i18n.t(await database.get_lang(ctx.author.id), "m_bet_invalid"))
+            return await ctx.send(i18n.t(await database.get_lang(ctx.author.id), "m_bet_invalid", mention=ctx.author.mention))
 
         # Mode nahi diya? Dropdown dikhao - wahi se select karke game shuru
         if spec is None:
             lang = await database.get_lang(ctx.author.id)
             user = await database.get_user(ctx.author.id)
             if not user or user["coins"] < bet:
-                return await ctx.send(i18n.t(lang, "m_poor", coin=COIN, balance=user['coins'] if user else 0))
+                return await ctx.send(i18n.t(lang, "m_poor", coin=COIN, balance=user['coins'] if user else 0, mention=ctx.author.mention))
             view = ModeSelectView(ctx, bet)
             msg = await ctx.send(
-                i18n.t(lang, "m_mode_msg", bet=bet, coin=COIN),
+                i18n.t(lang, "m_mode_msg", bet=bet, coin=COIN, mention=ctx.author.mention),
                 view=view,
             )
             view.message = msg
@@ -456,11 +462,11 @@ class Mines(commands.Cog):
         lang = await database.get_lang(ctx.author.id)
         parsed = parse_spec(spec)
         if parsed is None:
-            return await ctx.send(i18n.t(lang, "m_bad_mode", prefix=ctx.clean_prefix))
+            return await ctx.send(i18n.t(lang, "m_bad_mode", prefix=ctx.clean_prefix, mention=ctx.author.mention))
 
         user = await database.get_user(ctx.author.id)
         if not user or user["coins"] < bet:
-            return await ctx.send(i18n.t(lang, "m_poor", coin=COIN, balance=user['coins'] if user else 0))
+            return await ctx.send(i18n.t(lang, "m_poor", coin=COIN, balance=user['coins'] if user else 0, mention=ctx.author.mention))
 
         size, bombs, label = parsed
         game = MinesGame(ctx.author.id, bet, size, bombs, label)

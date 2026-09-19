@@ -63,13 +63,13 @@ class Slots(commands.Cog):
         """
         lang = await database.get_lang(ctx.author.id)
         if ctx.author.id in SLOTS_ACTIVE:
-            return await ctx.send(i18n.t(lang, "s_busy"))
+            return await ctx.send(i18n.t(lang, "s_busy", mention=ctx.author.mention))
         if bet <= 0:
-            return await ctx.send(i18n.t(lang, "s_bet_invalid"))
+            return await ctx.send(i18n.t(lang, "s_bet_invalid", mention=ctx.author.mention))
 
         user = await database.get_user(ctx.author.id)
         if not user or user["coins"] < bet:
-            return await ctx.send(i18n.t(lang, "m_poor", coin=COIN, balance=user["coins"] if user else 0))
+            return await ctx.send(i18n.t(lang, "m_poor", coin=COIN, balance=user["coins"] if user else 0, mention=ctx.author.mention))
 
         SLOTS_ACTIVE.add(ctx.author.id)
         try:
@@ -82,7 +82,7 @@ class Slots(commands.Cog):
             animation = "<a:pikuracoin20749_512:1550522369175593061>"
             msg = await ctx.send(embed=discord.Embed(
                 title=i18n.t(lang, "s_title"),
-                description=i18n.t(lang, "s_spinning", animation=animation),
+                description=i18n.t(lang, "s_spinning", animation=animation, mention=ctx.author.mention),
                 color=discord.Color.blurple(),
             ))
 

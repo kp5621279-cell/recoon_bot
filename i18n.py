@@ -28,7 +28,12 @@ def load_all():
 
 
 def t(lang: str, key: str, **kwargs) -> str:
-    """Translate: user ki language -> key -> fallback English -> key hi dikhao."""
+    """Translate: user ki language -> key -> fallback English -> key hi dikhao.
+
+    Har message me {mention} placeholder ho sakta hai - jo call site user ka
+    mention pass karti hai ({mention}) wahi text ke aage dikhega.
+    """
+    kwargs.setdefault("mention", "")  # bina mention wale calls format se nahi tootenge
     data = _STRINGS.get(lang) or _STRINGS.get("en") or {}
     text = data.get(key) or _STRINGS.get("en", {}).get(key) or key
     if kwargs:
