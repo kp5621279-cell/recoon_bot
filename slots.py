@@ -76,6 +76,10 @@ class Slots(commands.Cog):
         SLOTS_ACTIVE.add(ctx.author.id)
         try:
             await database.update_coins(ctx.author.id, -bet)
+            try:
+                await database.record_game(ctx.author.id)
+            except Exception:
+                pass
             from bot import game_xp
             await game_xp(ctx)
 

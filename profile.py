@@ -255,6 +255,87 @@ def render_profile_card(
 
 # ---------------- Discord commands ----------------
 
+class LeaderboardView(discord.ui.View):
+    """Dropdown wala leaderboard - har category ka top 10."""
+
+    MEDALS = {"1": "🥇", "2": "🥈", "3": "🥉"}
+
+    def __init__(self, ctx: commands.Context, lang: str):
+        super().__init__(timeout=120.0)
+        self.ctx = ctx
+        self.lang = lang
+        self.message = None
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message(
+                i18n.t(self.lang, "lb_not_yours", mention=interaction.user.mention), ephemeral=True
+            )
+            return False
+        return True
+
+    @discord.ui.select(
+        placeholder="🏆 Choose a leaderboard...",
+        min_values=1,
+        max_values=1,
+        options=[
+            discord.SelectOption(label="Level", value="level", description="Highest level players", emoji="🏆"),
+            discord.SelectOption(label="Coins", value="coins", description="Richest players", emoji="💰"),
+            discord.SelectOption(label="Streak", value="streak", description="Longest daily streaks", emoji="🔥"),
+            discord.SelectOption(label="Games (7d)", value="games", description="Most games in the last 7 days", emoji="🎮"),
+        ],
+    )
+    async def category_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        key = select.values[0]
+        embed = await self.build_embed(key)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    async def build_embed(self, key: str) -> discord.Embed:
+        lang = self.lang
+        title = i18n.t(lang, f"lb_title_{key}")
+        embed = discord.Embed(title=title, color=discord.Color.gold())
+        embed.set_thumbnail(url=BANNER_URL)
+
+        if key == "games":
+            data = await database.get_all_games_7d()
+            rows = sorted(data.items(), key=lambda kv: kv[1], reverse=True)[:10]
+            entries = [(uid, n) for uid, n in rows]
+            fmt = lambda v: i18n.t(lang, "lb_games_val", n=v)
+        elif key == "coins":
+            entries = await database.get_top_coins(10)
+            fmt = lambda v: f"{v} {COIN}"
+        elif key == "streak":
+            entries = await database.get_top_streaks(10)
+            fmt = lambda v: i18n.t(lang, "lb_streak_val", n=v)
+        else:  # level
+            entries = await database.get_top_xp(10)
+            entries = [(uid, database.level_from_xp(xp)) for uid, xp in entries]
+            fmt = lambda v: i18n.t(lang, "lb_level_val", n=v)
+
+        if not entries:
+            embed.description = i18n.t(lang, "lb_empty")
+            return embed
+
+        lines = []
+        for i, (uid, val) in enumerate(entries, start=1):
+            member = self.ctx.guild.get_member(uid) if self.ctx.guild else None
+            name = member.display_name if member else f"User {uid}"
+            medal = self.MEDALS.get(str(i), f"`#{i}`")
+            lines.append(f"{medal} **{name}** — {fmt(val)}")
+        embed.description = "\n".join(lines)
+        embed.set_footer(text=i18n.t(lang, "lb_footer", prefix=self.ctx.clean_prefix))
+        return embed
+
+    async def on_timeout(self):
+        try:
+            for item in self.children:
+                item.disabled = True
+            if self.message:
+                await self.message.edit(view=self)
+        except Exception:
+            pass
+
+
 class Profile(commands.Cog):
     """Profile card + banner store."""
 
@@ -322,6 +403,14 @@ class Profile(commands.Cog):
 
         f = discord.File(io.BytesIO(jpg), filename="profile.jpg")
         await ctx.send(file=f)
+
+    @commands.command(name="top", aliases=["lb", "leaderboard"])
+    async def top(self, ctx: commands.Context):
+        """Leaderboard - dropdown se category chuno (level/coins/streak/games 7d)."""
+        lang = await database.get_lang(ctx.author.id)
+        view = LeaderboardView(ctx, lang)
+        msg = await ctx.send(embed=await view.build_embed("level"), view=view)
+        view.message = msg
 
     @commands.command(name="shop", aliases=["banners"])
     async def banners(self, ctx: commands.Context):

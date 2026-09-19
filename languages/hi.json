@@ -261,5 +261,15 @@
   "h_cry": "Kisi ki wajah se ro! (cry @user)",
   "h_angry": "Kisi se gussa karo! (angry @user)",
   "h_dance": "Kisi ke saath dance karo! (dance @user)",
-  "bs_preview": "🔍 [प्रीव्यू]({url})"
+  "bs_preview": "🔍 [प्रीव्यू]({url})",
+  "lb_not_yours": "Ye leaderboard menu tumhara nahi hai!",
+  "lb_title_level": "🏆 लेवल लीडरबोर्ड",
+  "lb_title_coins": "💰 कॉइन्स लीडरबोर्ड",
+  "lb_title_streak": "🔥 स्ट्रीक लीडरबोर्ड",
+  "lb_title_games": "🎮 सबसे ज्यादा गेम्स — पिछले 7 दिन",
+  "lb_level_val": "लेवल {n}",
+  "lb_streak_val": "{n} दिन की स्ट्रीक",
+  "lb_games_val": "{n} गेम्स खेले",
+  "lb_empty": "इस लीडरबोर्ड पर अभी कोई नहीं — पहले तुम बनो!",
+  "lb_footer": "ड्रॉपडाउन से कैटेगरी बदलो • {prefix}top"
 }

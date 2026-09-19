@@ -241,5 +241,15 @@
   "gif_self_angry": "{mention} Respire un bon coup ! 😤",
   "gif_dance": "{sender} **danse** avec {target} ! 💃",
   "gif_self_dance": "{mention} Soirée danse solo ! 💃",
-  "bs_preview": "🔍 [Aperçu]({url})"
+  "bs_preview": "🔍 [Aperçu]({url})",
+  "lb_not_yours": "Ce menu de classement n'est pas pour vous !",
+  "lb_title_level": "🏆 Classement des niveaux",
+  "lb_title_coins": "💰 Classement des pièces",
+  "lb_title_streak": "🔥 Classement des séries",
+  "lb_title_games": "🎮 Plus de parties — 7 derniers jours",
+  "lb_level_val": "Niveau {n}",
+  "lb_streak_val": "série de {n} jours",
+  "lb_games_val": "{n} parties jouées",
+  "lb_empty": "Personne dans ce classement — soyez le premier !",
+  "lb_footer": "Changez de catégorie dans le menu • {prefix}top"
 }

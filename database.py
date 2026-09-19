@@ -97,6 +97,11 @@ async def init_db():
         except Exception:
             pass
 
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN games_7d TEXT DEFAULT '[]'")
+        except Exception:
+            pass
+
         await db.execute('''
             CREATE TABLE IF NOT EXISTS prayers (
                 pray_from INTEGER NOT NULL,
@@ -488,6 +493,71 @@ async def get_rank(user_id: int) -> int:
         ) as cursor:
             row = await cursor.fetchone()
             return row[0] if row else 1
+
+async def record_game(user_id: int):
+    """Game start record karo (last 7 days rolling window - JSON timestamp list)."""
+    import time as _time
+    import json as _json
+    now = _time.time()
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT games_7d FROM users WHERE user_id = ?', (user_id,)) as cursor:
+            row = await cursor.fetchone()
+        try:
+            stamps = _json.loads(row[0]) if row and row[0] else []
+        except Exception:
+            stamps = []
+        cutoff = now - 7 * 86400
+        stamps = [s for s in stamps if isinstance(s, (int, float)) and s >= cutoff]
+        stamps.append(now)
+        await db.execute('UPDATE users SET games_7d = ? WHERE user_id = ?', (_json.dumps(stamps), user_id))
+        await db.commit()
+
+async def get_games_7d(user_id: int) -> int:
+    """Ye user ne pichhle 7 din me kitne games khelo."""
+    import time as _time
+    import json as _json
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT games_7d FROM users WHERE user_id = ?', (user_id,)) as cursor:
+            row = await cursor.fetchone()
+    try:
+        stamps = _json.loads(row[0]) if row and row[0] else []
+    except Exception:
+        return 0
+    cutoff = _time.time() - 7 * 86400
+    return sum(1 for s in stamps if isinstance(s, (int, float)) and s >= cutoff)
+
+async def get_all_games_7d() -> dict:
+    """Sab users ka {user_id: games_played_last_7_days} map."""
+    import time as _time
+    import json as _json
+    cutoff = _time.time() - 7 * 86400
+    out = {}
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT user_id, games_7d FROM users WHERE games_7d IS NOT NULL') as cursor:
+            async for uid, raw in cursor:
+                try:
+                    stamps = _json.loads(raw)
+                except Exception:
+                    continue
+                n = sum(1 for s in stamps if isinstance(s, (int, float)) and s >= cutoff)
+                if n:
+                    out[uid] = n
+    return out
+
+async def get_top_coins(limit: int = 10):
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT user_id, coins FROM users WHERE coins > 0 ORDER BY coins DESC LIMIT ?', (limit,)) as cursor:
+            return [(r[0], r[1]) for r in await cursor.fetchall()]
+
+async def get_top_xp(limit: int = 10):
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT user_id, xp FROM users WHERE xp > 0 ORDER BY xp DESC LIMIT ?', (limit,)) as cursor:
+            return [(r[0], r[1]) for r in await cursor.fetchall()]
+
+async def get_top_streaks(limit: int = 10):
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT user_id, daily_streak FROM users WHERE daily_streak > 0 ORDER BY daily_streak DESC LIMIT ?', (limit,)) as cursor:
+            return [(r[0], r[1]) for r in await cursor.fetchall()]
 
 async def get_daily_streak(user_id: int) -> int:
     async with aiosqlite.connect(DB_PATH) as db:

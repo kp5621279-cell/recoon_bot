@@ -241,5 +241,15 @@
   "gif_self_angry": "{mention} 深呼吸！😤",
   "gif_dance": "{sender} 和 {target} **跳舞**！💃",
   "gif_self_dance": "{mention} 独舞派对！💃",
-  "bs_preview": "🔍 [预览]({url})"
+  "bs_preview": "🔍 [预览]({url})",
+  "lb_not_yours": "这个排行榜菜单不是给你的！",
+  "lb_title_level": "🏆 等级排行榜",
+  "lb_title_coins": "💰 金币排行榜",
+  "lb_title_streak": "🔥 连续排行榜",
+  "lb_title_games": "🎮 最多游戏 — 最近 7 天",
+  "lb_level_val": "等级 {n}",
+  "lb_streak_val": "连续 {n} 天",
+  "lb_games_val": "玩了 {n} 局",
+  "lb_empty": "这个排行榜上还没有人——做第一个吧！",
+  "lb_footer": "从下拉菜单切换类别 • {prefix}top"
 }

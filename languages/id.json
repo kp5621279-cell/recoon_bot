@@ -241,5 +241,15 @@
   "gif_self_angry": "{mention} Tarik napas dalam-dalam! 😤",
   "gif_dance": "{sender} **menari** dengan {target}! 💃",
   "gif_self_dance": "{mention} Pesta dansa solo! 💃",
-  "bs_preview": "🔍 [Pratinjau]({url})"
+  "bs_preview": "🔍 [Pratinjau]({url})",
+  "lb_not_yours": "Menu papan peringkat ini bukan untuk Anda!",
+  "lb_title_level": "🏆 Papan Peringkat Level",
+  "lb_title_coins": "💰 Papan Peringkat Koin",
+  "lb_title_streak": "🔥 Papan Peringkat Streak",
+  "lb_title_games": "🎮 Game Terbanyak — 7 Hari Terakhir",
+  "lb_level_val": "Level {n}",
+  "lb_streak_val": "streak {n} hari",
+  "lb_games_val": "{n} game dimainkan",
+  "lb_empty": "Belum ada siapa pun di papan peringkat ini — jadilah yang pertama!",
+  "lb_footer": "Ganti kategori dari dropdown • {prefix}top"
 }

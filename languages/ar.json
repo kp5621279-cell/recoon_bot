@@ -241,5 +241,15 @@
   "gif_self_angry": "{mention} خذ نفساً عميقاً! 😤",
   "gif_dance": "{sender} **يرقص** مع {target}! 💃",
   "gif_self_dance": "{mention} حفلة رقص منفردة! 💃",
-  "bs_preview": "🔍 [معاينة]({url})"
+  "bs_preview": "🔍 [معاينة]({url})",
+  "lb_not_yours": "قائمة المتصدرين هذه ليست لك!",
+  "lb_title_level": "🏆 لوحة متصدري المستويات",
+  "lb_title_coins": "💰 لوحة متصدري العملات",
+  "lb_title_streak": "🔥 لوحة متصدري السلاسل",
+  "lb_title_games": "🎮 أكثر الألعاب — آخر 7 أيام",
+  "lb_level_val": "مستوى {n}",
+  "lb_streak_val": "سلسلة {n} يوم",
+  "lb_games_val": "لُعبت {n} ألعاب",
+  "lb_empty": "لا أحد في لوحة المتصدين هذه بعد — كن الأول!",
+  "lb_footer": "غيّر الفئة من القائمة • {prefix}top"
 }

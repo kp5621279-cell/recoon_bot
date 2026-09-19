@@ -423,6 +423,10 @@ class ModeSelectView(discord.ui.View):
         MINES_ACTIVE[self.ctx.author.id] = game
         await database.update_coins(self.ctx.author.id, -self.bet)
         try:
+            await database.record_game(self.ctx.author.id)
+        except Exception:
+            pass
+        try:
             from bot import game_xp
             await game_xp(self.ctx)
         except Exception:
@@ -493,6 +497,10 @@ class Mines(commands.Cog):
         )
         MINES_ACTIVE[ctx.author.id] = game
         await database.update_coins(ctx.author.id, -bet)
+        try:
+            await database.record_game(ctx.author.id)
+        except Exception:
+            pass
         try:
             from bot import game_xp
             await game_xp(ctx)

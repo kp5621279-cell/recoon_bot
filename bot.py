@@ -101,7 +101,7 @@ class CustomHelpCommand(commands.HelpCommand):
             cmd_info = f"**{self.context.clean_prefix}{command.name}** - {desc}"
             if command.name in ["coin", "aviator", "mine", "slots"]:
                 games_cmds.append(cmd_info)
-            elif command.name in ["bal", "daily", "req", "pay", "pray", "luck", "lkf"]:
+            elif command.name in ["bal", "daily", "req", "pay", "pray", "luck", "lkf", "top"]:
                 econ_cmds.append(cmd_info)
             elif command.name in ["afk", "profile", "banners", "buy", "banner", "setabout"]:
                 econ_cmds.append(cmd_info)
@@ -793,6 +793,7 @@ async def coin_flip(ctx: commands.Context, bet: int, choice: str = None):
 
     # Deduct bet temporarily (if they lose, it's gone; if they win, we add 2x bet)
     await database.update_coins(ctx.author.id, -bet)
+    await database.record_game(ctx.author.id)
     await game_xp(ctx.author.id)
 
     # Flip the coin using secrets for true randomness

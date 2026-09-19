@@ -241,5 +241,15 @@
   "gif_self_angry": "{mention} 深呼吸！😤",
   "gif_dance": "{sender} が {target} と**踊って**います！💃",
   "gif_self_dance": "{mention} ソロダンスパーティー！💃",
-  "bs_preview": "🔍 [プレビュー]({url})"
+  "bs_preview": "🔍 [プレビュー]({url})",
+  "lb_not_yours": "このリーダーボードメニューはあなたのものではありません！",
+  "lb_title_level": "🏆 レベルランキング",
+  "lb_title_coins": "💰 コインランキング",
+  "lb_title_streak": "🔥 連続記録ランキング",
+  "lb_title_games": "🎮 最多ゲーム数 — 過去7日間",
+  "lb_level_val": "レベル {n}",
+  "lb_streak_val": "{n}日連続",
+  "lb_games_val": "{n}ゲームプレイ",
+  "lb_empty": "このランキングにはまだ誰もいません——最初になろう！",
+  "lb_footer": "ドロップダウンでカテゴリを切替 • {prefix}top"
 }
