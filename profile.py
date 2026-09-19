@@ -404,7 +404,7 @@ class ShopView(discord.ui.View):
             if file:
                 await interaction.followup.edit_message(
                     interaction.message.id, embed=embed, view=self,
-                    files=[file], attachments=[])
+                    attachments=[file])
             else:
                 await interaction.followup.edit_message(
                     interaction.message.id, embed=embed, view=self, attachments=[])
