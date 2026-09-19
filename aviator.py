@@ -210,6 +210,10 @@ class Aviator(commands.Cog):
 
         # Take the bet up front, like the coin flip does.
         await database.update_coins(ctx.author.id, -bet)
+        try:
+            await database.add_xp(ctx.author.id, 10)
+        except Exception:
+            pass
 
         shift = database.luck_shift(await database.consume_luck(ctx.author.id))
         round_ = AviatorRound(self, ctx.author, bet, user_data["coins"], roll_crash_point(shift))

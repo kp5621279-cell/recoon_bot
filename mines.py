@@ -422,6 +422,10 @@ class ModeSelectView(discord.ui.View):
         )
         MINES_ACTIVE[self.ctx.author.id] = game
         await database.update_coins(self.ctx.author.id, -self.bet)
+        try:
+            await database.add_xp(self.ctx.author.id, 10)
+        except Exception:
+            pass
 
         await interaction.response.edit_message(
             content=f"🎮 **{label}** | Bet: {self.bet} {COIN}", embed=None, view=None
@@ -488,6 +492,10 @@ class Mines(commands.Cog):
         )
         MINES_ACTIVE[ctx.author.id] = game
         await database.update_coins(ctx.author.id, -bet)
+        try:
+            await database.add_xp(ctx.author.id, 10)
+        except Exception:
+            pass
         await game.start(ctx)
 
 

@@ -1,6 +1,7 @@
 import os
 import random
 import asyncio
+import time
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -30,6 +31,14 @@ PRAY_EMOJI = "<:praying:1550871729289695352>"
 LUCK_PER_PRAY = 15.0   # ek prayer kitna luck deta hai
 LUCK_FREE_DAILY = 10.0  # lkf (daily free luck)
 LUCK_PER_GAME = 35.0    # ek game khelne par kitna luck consume hota hai
+XP_PER_GAME = 10        # har game khelne par XP
+
+async def game_xp(user_id: int):
+    """Game start par XP do (profile level ke liye). Fire-and-forget."""
+    try:
+        await database.add_xp(user_id, XP_PER_GAME)
+    except Exception:
+        pass
 
 # Dynamic prefix getter
 async def get_dynamic_prefix(bot, message):
@@ -68,6 +77,8 @@ class CustomHelpCommand(commands.HelpCommand):
             if command.name in ["coin", "aviator", "mine", "slots"]:
                 games_cmds.append(cmd_info)
             elif command.name in ["bal", "daily", "req", "pay", "pray", "luck", "lkf"]:
+                econ_cmds.append(cmd_info)
+            elif command.name in ["afk", "profile", "banners", "buy", "banner", "setabout"]:
                 econ_cmds.append(cmd_info)
             elif command.name in ["ping", "help", "invite", "lang"]:
                 config_cmds.append(cmd_info)
@@ -123,6 +134,7 @@ class MyBot(commands.Bot):
         await self.load_extension("aviator")
         await self.load_extension("mines")
         await self.load_extension("slots")
+        await self.load_extension("profile")
 
 bot = MyBot(
     command_prefix=get_dynamic_prefix,
@@ -420,6 +432,45 @@ class GiveCoinsModal(discord.ui.Modal):
         await interaction.response.edit_message(embed=embed, view=self.beast_view)
 
 
+@bot.event
+async def on_message(message: discord.Message):
+    # DMs/bots skip
+    if message.guild is None or message.author.bot:
+        await bot.process_commands(message)
+        return
+
+    # 1) AFK user ne khud message bheja -> AFK clear
+    if await database.clear_afk(message.author.id):
+        lang = await database.get_lang(message.author.id)
+        mins = max(1, int((asyncio.get_event_loop().time() - _afk_since.get(message.author.id, 0)) // 60))
+        try:
+            await message.channel.send(i18n.t(lang, "afk_back", user=message.author.mention, time=f"{mins}m"))
+        except discord.HTTPException:
+            pass
+
+    # 2) Message me AFK kisi aur ka mention hai -> AFK notice bhejo (har mention par, no cooldown)
+    for mentioned in message.mentions:
+        if mentioned.id == message.author.id or mentioned.bot:
+            continue
+        afk = await database.get_afk(mentioned.id)
+        if afk:
+            reason, since = afk
+            mins = max(1, int((time.time() - since) // 60))
+            if mins >= 60:
+                ago = f"{mins // 60}h {mins % 60}m"
+            else:
+                ago = f"{mins}m"
+            lang = await database.get_lang(message.author.id)
+            try:
+                await message.channel.send(i18n.t(lang, "afk_notice", user=mentioned.mention, reason=reason, time=ago))
+            except discord.HTTPException:
+                pass
+            break  # ek notice per message kaafi hai
+
+    await bot.process_commands(message)
+
+_afk_since = {}  # user_id: monotonic time jab AFK laga (approx session ke liye)
+
 @bot.check
 async def global_agreement_check(ctx: commands.Context):
     # Disabled channel/server me bot kuch nahi karega (ignore commands silently)
@@ -695,6 +746,7 @@ async def coin_flip(ctx: commands.Context, bet: int, choice: str = None):
 
     # Deduct bet temporarily (if they lose, it's gone; if they win, we add 2x bet)
     await database.update_coins(ctx.author.id, -bet)
+    await game_xp(ctx.author.id)
 
     # Flip the coin using secrets for true randomness
     result_is_heads = secrets.choice([True, False])
@@ -808,6 +860,19 @@ async def pay_coins(ctx: commands.Context, amount: int, target: discord.Member):
         pass  # their DMs are closed, the coins still arrived
 
 
+@bot.command(name="afk")
+async def afk(ctx: commands.Context, *, reason: str = None):
+    """Go AFK with a reason - people who mention you will see it."""
+    lang = await database.get_lang(ctx.author.id)
+    if await database.get_afk(ctx.author.id):
+        return await ctx.send(i18n.t(lang, "afk_back", user=ctx.author.mention, time="0m"))
+
+    reason = (reason or "AFK").strip()[:100]
+    await database.set_afk(ctx.author.id, reason, time.time())
+    _afk_since[ctx.author.id] = asyncio.get_event_loop().time()
+    await ctx.send(i18n.t(lang, "afk_notice", user=ctx.author.mention, reason=reason, time="0m"))
+
+
 def _today() -> str:
     """UTC date string - prayer per-day limit isi se track hoti hai."""
     from datetime import datetime, timezone
@@ -893,11 +958,22 @@ async def luck_free(ctx: commands.Context):
 
 
 @bot.command(name="bal", aliases=["balance", "coins", "cash"])
-async def check_balance(ctx: commands.Context):
-    f"""Check your {COIN} balance."""
+async def check_balance(ctx: commands.Context, member: discord.Member = None):
+    f"""Check your {COIN} balance - ya kisi aur ka (tag karke)."""
     lang = await database.get_lang(ctx.author.id)
-    user_data = await database.get_user(ctx.author.id)
-    await ctx.send(i18n.t(lang, "bal", coins=user_data['coins'], coin=COIN, mention=ctx.author.mention))
+    member = member or ctx.author
+    user_data = await database.get_user(member.id)
+    if not user_data:
+        return await ctx.send(i18n.t(lang, "pf_no_account", user=member.display_name, mention=ctx.author.mention))
+    if member.id == ctx.author.id:
+        await ctx.send(i18n.t(lang, "bal", coins=user_data['coins'], coin=COIN, mention=ctx.author.mention))
+    else:
+        embed = discord.Embed(
+            description=i18n.t(lang, "bal_other", user=member.mention, coins=user_data['coins'], coin=COIN),
+            color=discord.Color.blurple(),
+        )
+        embed.set_author(name=member.display_name, icon_url=member.display_avatar.url)
+        await ctx.send(embed=embed)
 
 @bot.command(name="daily")
 async def daily_reward(ctx: commands.Context):
@@ -920,13 +996,37 @@ async def daily_reward(ctx: commands.Context):
         return
 
     import secrets
+    from datetime import datetime, timezone
     reward = secrets.randbelow(2001) + 1000 # 1000 to 3000
     
     await database.update_coins(ctx.author.id, reward)
     await database.update_daily_time(ctx.author.id, now)
-    
-    new_bal = user_data["coins"] + reward
+
+    # ---- Daily streak (consecutive UTC days) ----
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    from datetime import timedelta
+    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    last_day = await database.get_last_daily_day(ctx.author.id)
+    if last_day == yesterday:
+        streak = await database.get_daily_streak(ctx.author.id) + 1
+    elif last_day == today:
+        streak = await database.get_daily_streak(ctx.author.id)  # double-claim guard
+    else:
+        streak = 1
+    await database.set_daily_streak(ctx.author.id, streak, today)
+
+    # Streak bonus: har din +50, max 1000 extra
+    streak_bonus = min(1000, (streak - 1) * 50)
+    if streak_bonus:
+        await database.update_coins(ctx.author.id, streak_bonus)
+
+    # XP: daily claim = +25
+    await database.add_xp(ctx.author.id, 25)
+
+    new_bal = user_data["coins"] + reward + streak_bonus
     await ctx.send(i18n.t(lang, "daily_given", amount=reward, coin=COIN, balance=new_bal, mention=ctx.author.mention))
+    if streak >= 2:
+        await ctx.send(i18n.t(lang, "streak_up", streak=streak, bonus=streak_bonus, mention=ctx.author.mention))
 
 def main() -> None:
     if not DISCORD_TOKEN:

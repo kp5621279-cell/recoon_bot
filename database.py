@@ -67,12 +67,68 @@ async def init_db():
         except Exception:
             pass
 
+        try:
+            await db.execute('ALTER TABLE users ADD COLUMN xp INTEGER DEFAULT 0')
+        except Exception:
+            pass
+
+        try:
+            await db.execute('ALTER TABLE users ADD COLUMN daily_streak INTEGER DEFAULT 0')
+        except Exception:
+            pass
+
+        try:
+            await db.execute('ALTER TABLE users ADD COLUMN last_daily_day TEXT')
+        except Exception:
+            pass
+
+        try:
+            await db.execute('ALTER TABLE users ADD COLUMN banner_id INTEGER')
+        except Exception:
+            pass
+
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN about_me TEXT DEFAULT ''")
+        except Exception:
+            pass
+
+        try:
+            await db.execute('ALTER TABLE users ADD COLUMN created_at REAL')
+        except Exception:
+            pass
+
         await db.execute('''
             CREATE TABLE IF NOT EXISTS prayers (
                 pray_from INTEGER NOT NULL,
                 pray_to   INTEGER NOT NULL,
                 day       TEXT NOT NULL,
                 PRIMARY KEY (pray_from, pray_to, day)
+            )
+        ''')
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS afk (
+                user_id INTEGER PRIMARY KEY,
+                reason  TEXT NOT NULL,
+                since   REAL NOT NULL
+            )
+        ''')
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS banners (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                name      TEXT NOT NULL,
+                price     INTEGER NOT NULL,
+                gradient  TEXT,
+                file_path TEXT
+            )
+        ''')
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS user_banners (
+                user_id   INTEGER NOT NULL,
+                banner_id INTEGER NOT NULL,
+                PRIMARY KEY (user_id, banner_id)
             )
         ''')
 
@@ -137,7 +193,7 @@ async def get_all_voice_channels():
 async def get_user(user_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute(
-            'SELECT coins, agreed, last_daily, luck, last_luck_free FROM users WHERE user_id = ?',
+            'SELECT coins, agreed, last_daily, luck, last_luck_free, xp, daily_streak, last_daily_day, banner_id, about_me, created_at FROM users WHERE user_id = ?',
             (user_id,),
         ) as cursor:
             row = await cursor.fetchone()
@@ -148,6 +204,12 @@ async def get_user(user_id: int):
                     "last_daily": row[2] or 0,
                     "luck": row[3] or 0,
                     "last_luck_free": row[4] or 0,
+                    "xp": row[5] or 0,
+                    "daily_streak": row[6] or 0,
+                    "last_daily_day": row[7],
+                    "banner_id": row[8],
+                    "about_me": row[9] or "",
+                    "created_at": row[10],
                 }
             return None
 
@@ -372,6 +434,213 @@ async def cleanup_old_prayers(days_to_keep: int = 2):
             (f'-{days_to_keep} days',),
         )
         await db.commit()
+
+# ------------------- XP / Level / Streak / Profile -------------------
+
+def xp_for_level(level: int) -> int:
+    """Level `level` tak pahunchne ke liye total XP (100*n^2 curve)."""
+    return 100 * level * level
+
+def level_from_xp(xp: int) -> int:
+    """Current level nikalo: sabse bada n jiske liye xp >= 100*n^2."""
+    level = 0
+    while xp_for_level(level + 1) <= xp:
+        level += 1
+        if level > 1000:  # safety
+            break
+    return level
+
+async def add_xp(user_id: int, amount: int):
+    """XP add karo (user exist na kare to ignore - games me already created hota hai)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('UPDATE users SET xp = xp + ? WHERE user_id = ?', (amount, user_id))
+        await db.commit()
+
+async def get_xp(user_id: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT xp FROM users WHERE user_id = ?', (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            return (row[0] if row else 0) or 0
+
+async def get_rank(user_id: int) -> int:
+    """XP leaderboard me ye user ka position (1 = sabse zyada XP)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            'SELECT 1 + COUNT(*) FROM users WHERE xp > (SELECT COALESCE(MAX(xp), 0) FROM users WHERE user_id = ?)',
+            (user_id,),
+        ) as cursor:
+            row = await cursor.fetchone()
+            return row[0] if row else 1
+
+async def get_daily_streak(user_id: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT daily_streak FROM users WHERE user_id = ?', (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            return (row[0] if row else 0) or 0
+
+async def set_daily_streak(user_id: int, streak: int, day: str):
+    """Streak + aaj ka day save karo (user banao agar nahi hai)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('''
+            INSERT INTO users (user_id, coins, agreed, daily_streak, last_daily_day)
+            VALUES (?, 1000, TRUE, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET daily_streak = ?, last_daily_day = ?
+        ''', (user_id, streak, day, streak, day))
+        await db.commit()
+
+async def get_last_daily_day(user_id: int) -> str:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT last_daily_day FROM users WHERE user_id = ?', (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            return row[0] if row and row[0] else None
+
+async def set_about_me(user_id: int, text: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('''
+            INSERT INTO users (user_id, coins, agreed, about_me)
+            VALUES (?, 1000, TRUE, ?)
+            ON CONFLICT(user_id) DO UPDATE SET about_me = ?
+        ''', (user_id, text, text))
+        await db.commit()
+
+async def get_created_at(user_id: int) -> float:
+    """Account kab bana (unix ts). Naye users ke liye abhi ka time."""
+    import time as _time
+    async with aiosqlite.connect(DB_PATH) as db:
+        try:
+            async with db.execute('SELECT created_at FROM users WHERE user_id = ?', (user_id,)) as cursor:
+                row = await cursor.fetchone()
+                if row and row[0]:
+                    return row[0]
+        except Exception:
+            pass
+    return _time.time()
+
+# ------------------- AFK -------------------
+
+async def set_afk(user_id: int, reason: str, since: float):
+    """User ko AFK mark karo (reason + timestamp)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            'INSERT INTO afk (user_id, reason, since) VALUES (?, ?, ?) '
+            'ON CONFLICT(user_id) DO UPDATE SET reason = ?, since = ?',
+            (user_id, reason, since, reason, since),
+        )
+        await db.commit()
+
+async def get_afk(user_id: int):
+    """(reason, since) ya None."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT reason, since FROM afk WHERE user_id = ?', (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            return (row[0], row[1]) if row else None
+
+async def clear_afk(user_id: int) -> bool:
+    """AFK hatao. True agar AFK tha."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute('DELETE FROM afk WHERE user_id = ?', (user_id,))
+        await db.commit()
+        return cursor.rowcount > 0
+
+# ------------------- Banner store -------------------
+
+async def add_banner(name: str, price: int, gradient: str = None, file_path: str = None) -> int:
+    """Naya banner catalog me daalo, banner_id return karo.
+
+    gradient = 'c1|c2|c3' hex colors (procedural), ya file_path = custom image.
+    """
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            'INSERT INTO banners (name, price, gradient, file_path) VALUES (?, ?, ?, ?)',
+            (name, price, gradient, file_path),
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+async def get_banner(banner_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT id, name, price, gradient, file_path FROM banners WHERE id = ?', (banner_id,)) as cursor:
+            row = await cursor.fetchone()
+            if row:
+                return {"id": row[0], "name": row[1], "price": row[2], "gradient": row[3], "file_path": row[4]}
+            return None
+
+async def get_all_banners():
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT id, name, price, gradient, file_path FROM banners ORDER BY price') as cursor:
+            rows = await cursor.fetchall()
+            return [{"id": r[0], "name": r[1], "price": r[2], "gradient": r[3], "file_path": r[4]} for r in rows]
+
+async def remove_banner(banner_id: int) -> bool:
+    """Catalog se banner hatao (custom banners ke liye)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute('DELETE FROM banners WHERE id = ?', (banner_id,))
+        await db.execute('DELETE FROM user_banners WHERE banner_id = ?', (banner_id,))
+        await db.execute('UPDATE users SET banner_id = NULL WHERE banner_id = ?', (banner_id,))
+        await db.commit()
+        return cursor.rowcount > 0
+
+async def get_equipped_banner(user_id: int):
+    """User ka equipped banner ya None."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT banner_id FROM users WHERE user_id = ?', (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            if row and row[0]:
+                return await get_banner(row[0])
+    return None
+
+async def equip_banner(user_id: int, banner_id: int) -> bool:
+    """Banner equip karo - sirf owned. True = success."""
+    if not await owns_banner(user_id, banner_id):
+        return False
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('UPDATE users SET banner_id = ? WHERE user_id = ?', (banner_id, user_id))
+        await db.commit()
+    return True
+
+async def owns_banner(user_id: int, banner_id: int) -> bool:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            'SELECT 1 FROM user_banners WHERE user_id = ? AND banner_id = ?',
+            (user_id, banner_id),
+        ) as cursor:
+            return await cursor.fetchone() is not None
+
+async def buy_banner(user_id: int, banner_id: int, price: int) -> str:
+    """Banner kharido (coins kat ke). Returns: 'ok' | 'poor' | 'owned' | 'no_banner'.
+
+    Coins check aur deduction ek hi atomic UPDATE me - race-safe (transfer_coins pattern).
+    """
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT 1 FROM banners WHERE id = ?', (banner_id,)) as cursor:
+            if await cursor.fetchone() is None:
+                return "no_banner"
+        async with db.execute('SELECT 1 FROM user_banners WHERE user_id = ? AND banner_id = ?', (user_id, banner_id)) as cursor:
+            if await cursor.fetchone() is not None:
+                return "owned"
+
+        cursor = await db.execute(
+            'UPDATE users SET coins = coins - ? WHERE user_id = ? AND coins >= ?',
+            (price, user_id, price),
+        )
+        if cursor.rowcount == 0:
+            await db.rollback()
+            return "poor"
+
+        await db.execute('INSERT OR IGNORE INTO user_banners (user_id, banner_id) VALUES (?, ?)', (user_id, banner_id))
+        await db.commit()
+        return "ok"
+
+async def get_owned_banners(user_id: int):
+    """User ke saare owned banners (catalog rows)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('''
+            SELECT b.id, b.name, b.price, b.gradient, b.file_path
+            FROM user_banners ub JOIN banners b ON b.id = ub.banner_id
+            WHERE ub.user_id = ? ORDER BY b.price
+        ''', (user_id,)) as cursor:
+            rows = await cursor.fetchall()
+            return [{"id": r[0], "name": r[1], "price": r[2], "gradient": r[3], "file_path": r[4]} for r in rows]
 
 async def get_lang(user_id: int) -> str:
     """User ki chosen language (default 'en')."""
