@@ -355,6 +355,61 @@ class LeaderboardView(discord.ui.View):
             pass
 
 
+class ShopView(discord.ui.View):
+    """Dropdown se shop ke sections switch karo - banners/animals/food/abilities."""
+
+    SECTIONS = [
+        ("banners", "bs_title", "🖼️"),
+        ("animals", "an_shop_animals", "🐾"),
+        ("food", "an_shop_food", "🍖"),
+        ("abilities", "an_shop_abilities", "⚡"),
+    ]
+
+    def __init__(self, ctx: commands.Context, lang: str, cog, current: str = "banners"):
+        super().__init__(timeout=120.0)
+        self.ctx = ctx
+        self.lang = lang
+        self.cog = cog
+        self.message = None
+        # Har instance ke liye FRESH options (default highlight current section)
+        self.shop_select.options = [
+            discord.SelectOption(
+                label=i18n.t(lang, key)[:100], value=value, emoji=emoji,
+                default=(value == current),
+            )
+            for value, key, emoji in self.SECTIONS
+        ]
+
+    @discord.ui.select(
+        placeholder="📂 Section chuno...",
+        min_values=1,
+        max_values=1,
+        options=[
+            discord.SelectOption(label="Banners", value="banners", emoji="🖼️"),
+            discord.SelectOption(label="Animals", value="animals", emoji="🐾"),
+            discord.SelectOption(label="Food", value="food", emoji="🍖"),
+            discord.SelectOption(label="Abilities", value="abilities", emoji="⚡"),
+        ],
+    )
+    async def shop_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        if interaction.user.id != self.ctx.author.id:
+            return await interaction.response.send_message(i18n.t("en", "not_for_you"), ephemeral=True)
+        section = select.values[0]
+        for opt in self.shop_select.options:
+            opt.default = (opt.value == section)
+        embed = await self.cog.shop_embed(self.ctx, self.lang, section)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    async def on_timeout(self):
+        try:
+            for item in self.children:
+                item.disabled = True
+            if self.message:
+                await self.message.edit(view=self)
+        except Exception:
+            pass
+
+
 class Profile(commands.Cog):
     """Profile card + banner store."""
 
@@ -433,18 +488,25 @@ class Profile(commands.Cog):
 
     @commands.command(name="shop", aliases=["banners", "astore"])
     async def banners(self, ctx: commands.Context, section: str = None):
-        """Unified shop - banners / animals / food / abilities."""
+        """Unified shop - dropdown se banners/animals/food/abilities switch karo."""
         lang = await database.get_lang(ctx.author.id)
-        section = (section or "").lower()
-        if section in ("animals", "animal", "food", "abilities", "ability"):
-            return await self._animal_shop(ctx, lang, section)
-        return await self._banner_shop(ctx, lang)
+        section = (section or "banners").lower()
+        if section in ("animal",):
+            section = "animals"
+        if section in ("ability",):
+            section = "abilities"
+        if section not in ("banners", "animals", "food", "abilities"):
+            section = "banners"
+        embed = await self.shop_embed(ctx, lang, section)
+        view = ShopView(ctx, lang, self, section)
+        msg = await ctx.send(embed=embed, view=view)
+        view.message = msg
 
-    async def _animal_shop(self, ctx, lang, section: str):
-        """Animals/Food/Abilities sections (animals.py ke catalogs se)."""
+    async def shop_embed(self, ctx, lang, section: str) -> discord.Embed:
+        """Kisi bhi section ka shop embed banao (dropdown + command dono use karte hain)."""
         from animals import FOODS, ABILITIES, RARITY_META
         COIN_A = "<:coin:1550545065397584066>"
-        if section in ("animals", "animal"):
+        if section == "animals":
             species = [s for s in await database.get_all_species() if s["in_store"]]
             lines = [f"`#{i}` {s['emoji']} **{s['name']}** — {s['price']} {COIN_A} "
                      f"({RARITY_META[s['rarity']]['emoji']} {s['rarity'].title()})"
@@ -452,23 +514,23 @@ class Profile(commands.Cog):
             embed = discord.Embed(title=i18n.t(lang, "an_shop_animals"),
                                   description="\n".join(lines) or "—",
                                   color=discord.Color.orange())
-            embed.set_footer(text=i18n.t(lang, "an_shop_buy", prefix=ctx.clean_prefix))
-            return await ctx.send(embed=embed)
-        if section == "food":
+        elif section == "food":
             lines = [f"{f['emoji']} **{f['name']}** — {f['price']} {COIN_A} (+{f['hearts']}❤️)"
                      for f in FOODS.values()]
             embed = discord.Embed(title=i18n.t(lang, "an_shop_food"),
                                   description="\n".join(lines), color=discord.Color.red())
-            embed.set_footer(text=i18n.t(lang, "an_shop_buy", prefix=ctx.clean_prefix))
-            return await ctx.send(embed=embed)
-        lines = [f"{a['emoji']} **{a['name']}** — {a['price']} {COIN_A} — {a['desc']}"
-                 for a in ABILITIES.values()]
-        embed = discord.Embed(title=i18n.t(lang, "an_shop_abilities"),
-                              description="\n".join(lines), color=discord.Color.blurple())
+        elif section == "abilities":
+            lines = [f"{a['emoji']} **{a['name']}** — {a['price']} {COIN_A} — {a['desc']}"
+                     for a in ABILITIES.values()]
+            embed = discord.Embed(title=i18n.t(lang, "an_shop_abilities"),
+                                  description="\n".join(lines), color=discord.Color.blurple())
+        else:
+            return await self._banner_embed(ctx, lang)
+        embed.set_thumbnail(url=BANNER_URL)
         embed.set_footer(text=i18n.t(lang, "an_shop_buy", prefix=ctx.clean_prefix))
-        return await ctx.send(embed=embed)
+        return embed
 
-    async def _banner_shop(self, ctx, lang):
+    async def _banner_embed(self, ctx, lang):
         all_b = await database.get_all_banners()
         owned = {b["id"] for b in await database.get_owned_banners(ctx.author.id)}
 
@@ -494,7 +556,7 @@ class Profile(commands.Cog):
             )
         embed.set_thumbnail(url=BANNER_URL)
         embed.set_footer(text=i18n.t(lang, "bs_footer", prefix=ctx.clean_prefix))
-        await ctx.send(embed=embed)
+        return embed
 
     @commands.command(name="buy")
     async def buy(self, ctx: commands.Context, item: str = None, ref=None):
