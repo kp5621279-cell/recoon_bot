@@ -63,6 +63,14 @@ async def init_db():
                 channel_id INTEGER NOT NULL
             )
         ''')
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS disabled_channels (
+                guild_id INTEGER NOT NULL,
+                channel_id INTEGER NOT NULL,
+                PRIMARY KEY (guild_id, channel_id)
+            )
+        ''')
             
         await db.commit()
 
@@ -223,6 +231,36 @@ async def reset_coins(user_id: int) -> int:
         ''', (user_id,))
         await db.commit()
         return 1000
+
+async def is_channel_disabled(guild_id: int, channel_id: int) -> bool:
+    """Channel ya pura server (channel_id=0) disabled hai?"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            'SELECT 1 FROM disabled_channels WHERE guild_id = ? AND channel_id IN (?, 0)',
+            (guild_id, channel_id),
+        ) as cursor:
+            return await cursor.fetchone() is not None
+
+async def set_channel_disabled(guild_id: int, channel_id: int, disabled: bool):
+    """Channel disable/enable karo. channel_id=0 = pura server."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        if disabled:
+            await db.execute(
+                'INSERT OR IGNORE INTO disabled_channels (guild_id, channel_id) VALUES (?, ?)',
+                (guild_id, channel_id),
+            )
+        else:
+            await db.execute(
+                'DELETE FROM disabled_channels WHERE guild_id = ? AND channel_id = ?',
+                (guild_id, channel_id),
+            )
+        await db.commit()
+
+async def clear_all_disabled(guild_id: int):
+    """Server ke saare disable hatayo (channel-wise + server-wide)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('DELETE FROM disabled_channels WHERE guild_id = ?', (guild_id,))
+        await db.commit()
 
 async def get_lang(user_id: int) -> str:
     """User ki chosen language (default 'en')."""

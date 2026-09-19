@@ -59,7 +59,7 @@ class CustomHelpCommand(commands.HelpCommand):
                 games_cmds.append(cmd_info)
             elif command.name in ["bal", "daily", "req", "pay"]:
                 econ_cmds.append(cmd_info)
-            elif command.name in ["ping", "help", "invite"]:
+            elif command.name in ["ping", "help", "invite", "lang"]:
                 config_cmds.append(cmd_info)
             elif command.name == "set":
                 config_cmds.append(cmd_info)
@@ -405,6 +405,11 @@ class GiveCoinsModal(discord.ui.Modal):
 
 @bot.check
 async def global_agreement_check(ctx: commands.Context):
+    # Disabled channel/server me bot kuch nahi karega (ignore commands silently)
+    if ctx.guild and not await bot.is_owner(ctx.author):
+        if await database.is_channel_disabled(ctx.guild.id, ctx.channel.id):
+            raise commands.CheckFailure("Channel disabled.")
+
     # Banned users ko sabse pehle rok do (owner chhod kar)
     if not await bot.is_owner(ctx.author) and await database.is_banned(ctx.author.id):
         lang = await database.get_lang(ctx.author.id)
@@ -481,6 +486,47 @@ async def invite(ctx: commands.Context):
     lang = await database.get_lang(ctx.author.id)
     link = "https://discord.com/oauth2/authorize?client_id=1550499489414909972&permissions=5454653866506561&integration_type=0&scope=bot"
     await ctx.send(i18n.t(lang, "invite", link=link))
+
+@bot.group(name="ds", invoke_without_command=True)
+@commands.has_permissions(manage_guild=True)
+async def ds_group(ctx: commands.Context):
+    """🔇 Bot ko is channel me disable/enable karo. Usage: ds all | ds off"""
+    await ctx.send_help(ctx.command)
+
+@ds_group.command(name="all")
+@commands.has_permissions(manage_guild=True)
+async def ds_all(ctx: commands.Context):
+    """Is channel me bot ko band karo (commands ignore karega)."""
+    await database.set_channel_disabled(ctx.guild.id, ctx.channel.id, True)
+    await ctx.send(f"🔇 Bot **is channel me disable** ho gaya. Ab yahan commands ignore hongi.\nWapas chalu karne ke liye: `{ctx.clean_prefix}ds off`")
+
+@ds_group.command(name="off")
+@commands.has_permissions(manage_guild=True)
+async def ds_off(ctx: commands.Context):
+    """Is channel me bot ko wapas chalu karo."""
+    await database.set_channel_disabled(ctx.guild.id, ctx.channel.id, False)
+    await ctx.send("🔊 Bot **is channel me wapas enable** ho gaya!")
+
+@ds_group.command(name="server")
+@commands.has_permissions(administrator=True)
+async def ds_server(ctx: commands.Context):
+    """Pura server me bot band (sirf admin)."""
+    await database.set_channel_disabled(ctx.guild.id, 0, True)
+    await ctx.send(f"🔇 Bot **pura server me disable** ho gaya!\nWapas: `{ctx.clean_prefix}ds serveroff`")
+
+@ds_group.command(name="serveroff")
+@commands.has_permissions(administrator=True)
+async def ds_serveroff(ctx: commands.Context):
+    """Pura server me bot wapas chalu (sirf admin)."""
+    await database.set_channel_disabled(ctx.guild.id, 0, False)
+    await ctx.send("🔊 Bot **pura server me wapas enable** ho gaya!")
+
+@ds_group.command(name="reset")
+@commands.has_permissions(administrator=True)
+async def ds_reset(ctx: commands.Context):
+    """Server ke saare disables ek saath hatao."""
+    await database.clear_all_disabled(ctx.guild.id)
+    await ctx.send("🔊 Saare channel disables **reset** ho gaye!")
 
 @bot.command(name="lang", aliases=["language"])
 async def language(ctx: commands.Context):
