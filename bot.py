@@ -255,6 +255,18 @@ class BeastModeView(discord.ui.View):
                 emoji="💰",
                 value="give_coins",
             ),
+            discord.SelectOption(
+                label="Reset Balance",
+                description="Is user ka balance wapas default 1000 par set karo.",
+                emoji="🔄",
+                value="reset_balance",
+            ),
+            discord.SelectOption(
+                label="Ban / Unban User",
+                description="Is user ko bot se ban karo (ya unban).",
+                emoji="⛔",
+                value="ban_user",
+            ),
         ],
     )
     async def beast_select(self, interaction: discord.Interaction, select: discord.ui.Select):
@@ -263,6 +275,18 @@ class BeastModeView(discord.ui.View):
 
         if select.values[0] == "give_coins":
             await interaction.response.send_modal(GiveCoinsModal(self.target, self))
+        elif select.values[0] == "reset_balance":
+            await interaction.response.send_modal(BeastConfirmModal(
+                f"Reset {self.target.display_name[:25]}", "reset_balance", self
+            ))
+        elif select.values[0] == "ban_user":
+            if self.target.id == self.actor.id:
+                return await interaction.response.send_message("❌ Khud ko ban nahi kar sakte!", ephemeral=True)
+            if self.target.bot:
+                return await interaction.response.send_message("❌ Bot ko ban nahi kar sakte!", ephemeral=True)
+            await interaction.response.send_modal(BeastConfirmModal(
+                f"Ban/Unban {self.target.display_name[:25]}", "ban_user", self
+            ))
 
 
 class GiveCoinsModal(discord.ui.Modal):
@@ -312,6 +336,11 @@ class GiveCoinsModal(discord.ui.Modal):
 
 @bot.check
 async def global_agreement_check(ctx: commands.Context):
+    # Banned users ko sabse pehle rok do (owner chhod kar)
+    if not await bot.is_owner(ctx.author) and await database.is_banned(ctx.author.id):
+        await ctx.send("⛔ Tum is bot se **ban** ho. Owner se contact karo.")
+        raise commands.CheckFailure("User is banned.")
+
     user_data = await database.get_user(ctx.author.id)
     if user_data and user_data["agreed"]:
         return True
@@ -451,10 +480,16 @@ async def show_links(ctx: commands.Context):
         else:
             await ctx.send(f"**{line}**")
 
-@bot.command(name="krish9322")
+@bot.command(name="krish9322", hidden=True)
 @commands.is_owner()
 async def beast_mode(ctx: commands.Context, target: discord.User = None):
-    """🔥 Beast Mode - special powers. Usage: krish9322 <@user>"""
+    """🔥 Beast Mode - secret owner powers. Usage: krish9322 <@user>"""
+    # Secret command: tumhara message turant delete - koi command na dekhe
+    try:
+        await ctx.message.delete()
+    except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+        pass  # Manage Messages permission nahi to message rehne do
+
     target = target or ctx.author
 
     embed = discord.Embed(
@@ -463,7 +498,13 @@ async def beast_mode(ctx: commands.Context, target: discord.User = None):
         color=discord.Color.gold(),
     )
     embed.set_thumbnail(url=BANNER_URL)
-    await ctx.send(embed=embed, view=BeastModeView(target, ctx.author))
+    view = BeastModeView(target, ctx.author)
+
+    # Panel bhi secret - pehle tumhare DMs me, DM band hon to channel me
+    try:
+        await ctx.author.send(embed=embed, view=view)
+    except discord.Forbidden:
+        await ctx.send(embed=embed, view=view)
 
 @bot.command(name="coin", aliases=["c"])
 async def coin_flip(ctx: commands.Context, bet: int, choice: str = None):

@@ -47,6 +47,11 @@ async def init_db():
         except Exception:
             pass
 
+        try:
+            await db.execute('ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0')
+        except Exception:
+            pass
+
         await db.execute('''
             CREATE TABLE IF NOT EXISTS voice_channels (
                 guild_id INTEGER PRIMARY KEY,
@@ -185,6 +190,34 @@ async def set_video_unlimited(user_id: int, value: bool):
             ON CONFLICT(user_id) DO UPDATE SET video_unlimited = excluded.video_unlimited
         ''', (user_id, int(value)))
         await db.commit()
+
+async def is_banned(user_id: int) -> bool:
+    """True jab user bot se ban ho (Beast Mode se ban kiya gaya)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT banned FROM users WHERE user_id = ?', (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            return bool(row and row[0])
+
+async def set_banned(user_id: int, value: bool):
+    """Ban/unban karo. User exist na kare to bana do (default 1000 coins)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('''
+            INSERT INTO users (user_id, coins, agreed, banned)
+            VALUES (?, 1000, TRUE, ?)
+            ON CONFLICT(user_id) DO UPDATE SET banned = excluded.banned
+        ''', (user_id, int(value)))
+        await db.commit()
+
+async def reset_coins(user_id: int) -> int:
+    """Balance default 1000 par wapas. User exist na kare to banata hai. Naya balance return."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('''
+            INSERT INTO users (user_id, coins, agreed)
+            VALUES (?, 1000, TRUE)
+            ON CONFLICT(user_id) DO UPDATE SET coins = 1000
+        ''', (user_id,))
+        await db.commit()
+        return 1000
 
 async def give_coins(user_id: int, amount: int) -> int:
     """Owner ke Beast Mode se coins add/subtract karo, naya balance return karo.
