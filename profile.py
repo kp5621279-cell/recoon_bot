@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 import discord
 from discord.ext import commands
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 import database
 import i18n
@@ -17,16 +17,22 @@ COIN = "<:coin:1550545065397584066>"
 
 FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
 CARD_W, CARD_H = 1000, 400
+PANEL_TOP = 210  # iske niche solid stats panel hai - banner sirf upar dikhta hai
 CARD_QUALITY = 88  # JPG quality (chhoti file, achha look)
 
 # Default banners: gradient hex colors (top->bottom). Prices in coins.
 DEFAULT_BANNERS = [
-    ("Sunset",   5000,  "ff7e5f|feb47b|ffcf6f"),
-    ("Ocean",    5000,  "2193b0|6dd5ed|b8e6f5"),
-    ("Neon",     12000, "8e2de2|4a00e0|ff2a6d"),
-    ("Forest",   12000, "134e5e|71b280|c9e4a5"),
-    ("Midnight", 25000, "0f0c29|302b63|24243e"),
-    ("Gold",     50000, "b8860b|ffd700|fff3b0"),
+    ("Sunset",   5000,  "ff7e5f|feb47b|ffcf6f", None),
+    ("Ocean",    5000,  "2193b0|6dd5ed|b8e6f5", None),
+    ("Neon",     12000, "8e2de2|4a00e0|ff2a6d", None),
+    ("Forest",   12000, "134e5e|71b280|c9e4a5", None),
+    ("Midnight", 25000, "0f0c29|302b63|24243e", None),
+    ("Gold",     50000, "b8860b|ffd700|fff3b0", None),
+]
+
+# Custom file banners (repo me shipped) - (name, price, file_path)
+CUSTOM_BANNERS = [
+    ("Recoon", 100, "banner_images/banner_emote.png"),
 ]
 
 
@@ -58,11 +64,23 @@ def render_gradient(w: int, h: int, spec: str) -> Image.Image:
 
 
 def banner_image(banner: dict, w: int = CARD_W, h: int = CARD_H) -> Image.Image:
-    """Banner row -> PIL Image (file ya gradient)."""
+    """Banner row -> PIL Image (file ya gradient).
+
+    File banners: blurred cover background + fit-width sharp image centered
+    in the visible (top) area - chhoti/wide images bhi achhi dikhti hain.
+    """
     if banner and banner.get("file_path") and os.path.exists(banner["file_path"]):
         try:
             img = Image.open(banner["file_path"]).convert("RGB")
-            return img.resize((w, h))
+            # Background: pura card cover, blur
+            bg = img.resize((w, h)).filter(ImageFilter.GaussianBlur(16))
+            # Foreground: width fit, visible area me center
+            scale = w / img.width
+            fg_h = int(img.height * scale)
+            fg = img.resize((w, fg_h))
+            y = (PANEL_TOP - fg_h) // 2
+            bg.paste(fg, (0, y))
+            return bg
         except Exception:
             pass
     spec = (banner or {}).get("gradient") or "0f0c29|302b63|24243e"
@@ -102,7 +120,7 @@ def render_profile_card(
 
     # Neeche wala solid panel (stats ka area)
     dr = ImageDraw.Draw(img)
-    panel_top = 210
+    panel_top = PANEL_TOP
     dr.rectangle([0, panel_top, CARD_W, CARD_H], fill=(15, 15, 22, 235))
 
     # ---------------- Avatar circle ----------------
@@ -306,9 +324,9 @@ class Profile(commands.Cog):
         await database.add_xp(ctx.author.id, 10)
         await ctx.send(i18n.t(lang, "bs_bought", name=banner["name"], price=banner["price"], coin=COIN, prefix=ctx.clean_prefix, mention=ctx.author.mention))
 
-    @commands.command(name="banner")
+    @commands.command(name="equipb", aliases=["banner"])
     async def banner(self, ctx: commands.Context, banner_id: int = None):
-        """Equip banner: !banner <id> (bina id = current banner dikhao)."""
+        """Equip banner: !equipb <id> (bina id = current banner dikhao)."""
         lang = await database.get_lang(ctx.author.id)
 
         if banner_id is None:
@@ -361,9 +379,13 @@ class Profile(commands.Cog):
 async def setup(bot):
     # init_db pehle (tables honi chahiye - startup hook se pehle setup chal sakta hai)
     await database.init_db()
-    # Default banners ensure karo (sirf pehli baar - name match karke)
+    # Default gradient banners ensure karo (sirf pehli baar - name match karke)
     existing = {b["name"] for b in await database.get_all_banners()}
-    for name, price, grad in DEFAULT_BANNERS:
+    for name, price, grad, _ in DEFAULT_BANNERS:
         if name not in existing:
             await database.add_banner(name, price, gradient=grad)
+    # Custom file banners (repo ke saath shipped)
+    for name, price, path in CUSTOM_BANNERS:
+        if name not in existing and os.path.exists(path):
+            await database.add_banner(name, price, gradient=None, file_path=path)
     await bot.add_cog(Profile(bot))
