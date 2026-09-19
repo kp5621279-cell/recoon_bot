@@ -240,5 +240,6 @@
   "gif_angry": "{sender} **marah** pada {target}! 😠",
   "gif_self_angry": "{mention} Tarik napas dalam-dalam! 😤",
   "gif_dance": "{sender} **menari** dengan {target}! 💃",
-  "gif_self_dance": "{mention} Pesta dansa solo! 💃"
+  "gif_self_dance": "{mention} Pesta dansa solo! 💃",
+  "bs_preview": "🔍 [Pratinjau]({url})"
 }

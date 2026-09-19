@@ -240,5 +240,6 @@
   "gif_angry": "{sender} {target} वर **रागावला** आहे! 😠",
   "gif_self_angry": "{mention} खोल श्वास घे! 😤",
   "gif_dance": "{sender} {target} सोबत **डान्स** करतो आहे! 💃",
-  "gif_self_dance": "{mention} सोलो डान्स पार्टी! 💃"
+  "gif_self_dance": "{mention} सोलो डान्स पार्टी! 💃",
+  "bs_preview": "🔍 [प्रीव्ह्यू]({url})"
 }

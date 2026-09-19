@@ -240,5 +240,6 @@
   "gif_angry": "{sender} est **fâché** contre {target} ! 😠",
   "gif_self_angry": "{mention} Respire un bon coup ! 😤",
   "gif_dance": "{sender} **danse** avec {target} ! 💃",
-  "gif_self_dance": "{mention} Soirée danse solo ! 💃"
+  "gif_self_dance": "{mention} Soirée danse solo ! 💃",
+  "bs_preview": "🔍 [Aperçu]({url})"
 }

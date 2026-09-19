@@ -240,5 +240,6 @@
   "gif_angry": "{sender} が {target} に**怒って**います！😠",
   "gif_self_angry": "{mention} 深呼吸！😤",
   "gif_dance": "{sender} が {target} と**踊って**います！💃",
-  "gif_self_dance": "{mention} ソロダンスパーティー！💃"
+  "gif_self_dance": "{mention} ソロダンスパーティー！💃",
+  "bs_preview": "🔍 [プレビュー]({url})"
 }

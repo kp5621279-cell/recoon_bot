@@ -20,13 +20,56 @@ CARD_W, CARD_H = 1000, 520
 PANEL_TOP = 310  # iske niche solid stats panel hai - banner area lamba (details ke liye)
 CARD_QUALITY = 88  # JPG quality (chhoti file, achha look)
 
-# Custom file banners (repo me shipped) - (name, price, file_path)
-# Ye hi store ka poora catalog hai (owner !addbanner se aur bhi add kar sakta hai)
+# Custom banners (repo me shipped) - (name, price, file_path, source_url)
+# url = emoji/banner ka direct CDN link (shop preview + profile card render ke liye)
+URLS = {
+    "recoon":   "https://cdn.discordapp.com/emojis/1550526211388612608.png?size=512",
+    "mystery":  "https://cdn.discordapp.com/emojis/1550904280897159188.png?size=512",
+    "blue":     "https://cdn.discordapp.com/emojis/1550904299213557790.png?size=512",
+    "aureus":   "https://cdn.discordapp.com/emojis/1550913740550049883.png?size=512",
+    "crimson":  "https://cdn.discordapp.com/emojis/1550913713991585973.png?size=512",
+    "skyline":  "https://cdn.discordapp.com/emojis/1550913672241746020.png?size=512",
+    "verdant":  "https://cdn.discordapp.com/emojis/1550913632228081695.png?size=512",
+    "ember":    "https://cdn.discordapp.com/emojis/1550913597431873676.png?size=512",
+    "oceanic":  "https://cdn.discordapp.com/emojis/1550913476749295716.png?size=512",
+    "aurora":   "https://cdn.discordapp.com/emojis/1550913434542149733.gif?size=512",
+    "sapphire": "https://cdn.discordapp.com/emojis/1550913413499195432.png?size=512",
+    "noir":     "https://cdn.discordapp.com/emojis/1550913448827682826.png?size=512",
+}
+
 CUSTOM_BANNERS = [
-    ("Recoon",  100,   "banner_images/banner_emote.png"),
-    ("Mystery", 5000,  "banner_images/banner_mystery.png"),
-    ("Blue",    10000, "banner_images/banner_blue.png"),
+    ("Recoon",   100,   "banner_images/banner_emote.png",    URLS["recoon"]),
+    ("Mystery",  5000,  "banner_images/banner_mystery.png",  URLS["mystery"]),
+    ("Blue",     10000, "banner_images/banner_blue.png",     URLS["blue"]),
+    ("Aureus",   3000,  "banner_images/banner_911.png",      URLS["aureus"]),
+    ("Crimson",  3000,  "banner_images/banner_301.png",      URLS["crimson"]),
+    ("Skyline",  3000,  "banner_images/banner_159.png",      URLS["skyline"]),
+    ("Verdant",  3000,  "banner_images/banner_422.png",      URLS["verdant"]),
+    ("Ember",    3000,  "banner_images/banner_1.png",        URLS["ember"]),
+    ("Oceanic",  3000,  "banner_images/banner_563.png",      URLS["oceanic"]),
+    ("Aurora",   7500,  "banner_images/banner_150.gif",      URLS["aurora"]),
+    ("Sapphire", 7500,  "banner_images/banner_113.png",      URLS["sapphire"]),
+    ("Noir",     7500,  "banner_images/banner__.png",        URLS["noir"]),
 ]
+
+# URL-banners ka PIL render cache: {url: Image.Image} - har card render par download na ho
+_URL_IMG_CACHE = {}
+
+
+def _load_image_from_url(url: str):
+    """URL se image download/render karo (cache ke saath). None = fail."""
+    if url in _URL_IMG_CACHE:
+        return _URL_IMG_CACHE[url]
+    try:
+        import urllib.request
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            raw = r.read()
+        img = Image.open(io.BytesIO(raw)).convert("RGBA")
+        _URL_IMG_CACHE[url] = img
+        return img
+    except Exception:
+        return None
 
 
 def _font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
@@ -56,24 +99,30 @@ def render_gradient(w: int, h: int, spec: str) -> Image.Image:
     return img
 
 
-def banner_image(banner: dict, w: int = CARD_W, h: int = CARD_H) -> Image.Image:
-    """Banner row -> PIL Image (file ya gradient).
+def banner_image(banner: dict, w: int = CARD_W, h: int = CARD_H):
+    """Banner row -> PIL Image (url / file / gradient).
 
-    File banners: blurred cover background + fit-width sharp image centered
+    URL/file banners: blurred cover background + height-fit sharp image centered
     in the visible (top) area - chhoti/wide images bhi achhi dikhti hain.
     """
-    if banner and banner.get("file_path") and os.path.exists(banner["file_path"]):
+    source = None
+    if banner and banner.get("url"):
+        source = _load_image_from_url(banner["url"])
+    if source is None and banner and banner.get("file_path") and os.path.exists(banner["file_path"]):
         try:
-            img = Image.open(banner["file_path"]).convert("RGB")
-            # Background: pura card cover, blur
-            bg = img.resize((w, h)).filter(ImageFilter.GaussianBlur(16))
+            source = Image.open(banner["file_path"]).convert("RGBA")
+        except Exception:
+            source = None
+    if source is not None:
+        try:
+            img = source.resize((w, h)).filter(ImageFilter.GaussianBlur(16))
             # Foreground: height fit to visible banner area, centered (wide image puri dikhe)
-            scale = PANEL_TOP / img.height
-            fg_w = int(img.width * scale)
-            fg = img.resize((fg_w, PANEL_TOP))
+            scale = PANEL_TOP / source.height
+            fg_w = max(1, int(source.width * scale))
+            fg = source.resize((fg_w, PANEL_TOP))
             x = (w - fg_w) // 2
-            bg.paste(fg, (x, 0))
-            return bg
+            img.paste(fg, (x, 0), fg if fg.mode == "RGBA" else None)
+            return img
         except Exception:
             pass
     spec = (banner or {}).get("gradient") or "0f0c29|302b63|24243e"
@@ -292,11 +341,12 @@ class Profile(commands.Cog):
                 status = i18n.t(lang, "bs_owned")
             else:
                 status = price
+            preview = i18n.t(lang, "bs_preview", url=b["url"]) if b.get("url") else ""
             # gradient preview strip
             grad = (b.get("gradient") or "0f0c29|302b63|24243e").replace("|", " ")
             embed.add_field(
                 name=f"#{b['id']} {b['name']}",
-                value=f"{status}\n`{grad}` — `{ctx.clean_prefix}buy banner {b['id']}`",
+                value=f"{status}\n{preview}\n`{grad}` — `{ctx.clean_prefix}buy banner {b['id']}`".strip(),
                 inline=False,
             )
         embed.set_thumbnail(url=BANNER_URL)
@@ -363,7 +413,7 @@ class Profile(commands.Cog):
         fname = f"banner_images/banner_{int(time.time())}{ext}"
         await att.save(fname)
 
-        banner_id = await database.add_banner(name[:20], price, gradient=None, file_path=fname)
+        banner_id = await database.add_banner(name[:20], price, gradient=None, file_path=fname, url=att.url)
         await ctx.send(i18n.t(lang, "bs_added", name=name, id=banner_id, mention=ctx.author.mention))
 
     @commands.command(name="setabout")
@@ -384,8 +434,11 @@ async def setup(bot):
         if b["gradient"]:
             await database.remove_banner(b["id"])
     # Custom file banners ensure karo (sirf pehli baar - name match karke)
-    existing = {b["name"] for b in await database.get_all_banners()}
-    for name, price, path in CUSTOM_BANNERS:
+    existing = {b["name"]: b for b in await database.get_all_banners()}
+    for name, price, path, url in CUSTOM_BANNERS:
         if name not in existing and os.path.exists(path):
-            await database.add_banner(name, price, gradient=None, file_path=path)
+            await database.add_banner(name, price, gradient=None, file_path=path, url=url)
+        elif name in existing and not existing[name].get("url") and url:
+            # purane entries me URL backfill (shop preview links ke liye)
+            await database.set_banner_url(existing[name]["id"], url)
     await bot.add_cog(Profile(bot))

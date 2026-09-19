@@ -260,5 +260,6 @@
   "h_laugh": "Kisi pe haso! (laugh @user)",
   "h_cry": "Kisi ki wajah se ro! (cry @user)",
   "h_angry": "Kisi se gussa karo! (angry @user)",
-  "h_dance": "Kisi ke saath dance karo! (dance @user)"
+  "h_dance": "Kisi ke saath dance karo! (dance @user)",
+  "bs_preview": "🔍 [प्रीव्यू]({url})"
 }

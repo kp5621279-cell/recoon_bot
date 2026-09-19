@@ -120,9 +120,15 @@ async def init_db():
                 name      TEXT NOT NULL,
                 price     INTEGER NOT NULL,
                 gradient  TEXT,
-                file_path TEXT
+                file_path TEXT,
+                url       TEXT
             )
         ''')
+
+        try:
+            await db.execute('ALTER TABLE banners ADD COLUMN url TEXT')
+        except Exception:
+            pass
 
         await db.execute('''
             CREATE TABLE IF NOT EXISTS user_banners (
@@ -555,32 +561,39 @@ async def clear_afk(user_id: int) -> bool:
 
 # ------------------- Banner store -------------------
 
-async def add_banner(name: str, price: int, gradient: str = None, file_path: str = None) -> int:
+async def add_banner(name: str, price: int, gradient: str = None, file_path: str = None, url: str = None) -> int:
     """Naya banner catalog me daalo, banner_id return karo.
 
-    gradient = 'c1|c2|c3' hex colors (procedural), ya file_path = custom image.
+    gradient = 'c1|c2|c3' hex colors (procedural), file_path = local image,
+    url = direct image link (shop preview + card render ke liye).
     """
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
-            'INSERT INTO banners (name, price, gradient, file_path) VALUES (?, ?, ?, ?)',
-            (name, price, gradient, file_path),
+            'INSERT INTO banners (name, price, gradient, file_path, url) VALUES (?, ?, ?, ?, ?)',
+            (name, price, gradient, file_path, url),
         )
         await db.commit()
         return cursor.lastrowid
 
 async def get_banner(banner_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute('SELECT id, name, price, gradient, file_path FROM banners WHERE id = ?', (banner_id,)) as cursor:
+        async with db.execute('SELECT id, name, price, gradient, file_path, url FROM banners WHERE id = ?', (banner_id,)) as cursor:
             row = await cursor.fetchone()
             if row:
-                return {"id": row[0], "name": row[1], "price": row[2], "gradient": row[3], "file_path": row[4]}
+                return {"id": row[0], "name": row[1], "price": row[2], "gradient": row[3], "file_path": row[4], "url": row[5]}
             return None
 
 async def get_all_banners():
     async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute('SELECT id, name, price, gradient, file_path FROM banners ORDER BY price') as cursor:
+        async with db.execute('SELECT id, name, price, gradient, file_path, url FROM banners ORDER BY price') as cursor:
             rows = await cursor.fetchall()
-            return [{"id": r[0], "name": r[1], "price": r[2], "gradient": r[3], "file_path": r[4]} for r in rows]
+            return [{"id": r[0], "name": r[1], "price": r[2], "gradient": r[3], "file_path": r[4], "url": r[5]} for r in rows]
+
+async def set_banner_url(banner_id: int, url: str):
+    """Banner ka preview URL set/backfill karo."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('UPDATE banners SET url = ? WHERE id = ?', (url, banner_id))
+        await db.commit()
 
 async def remove_banner(banner_id: int) -> bool:
     """Catalog se banner hatao (custom banners ke liye)."""

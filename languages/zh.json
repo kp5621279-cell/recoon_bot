@@ -240,5 +240,6 @@
   "gif_angry": "{sender} **生** {target} 的**气**！😠",
   "gif_self_angry": "{mention} 深呼吸！😤",
   "gif_dance": "{sender} 和 {target} **跳舞**！💃",
-  "gif_self_dance": "{mention} 独舞派对！💃"
+  "gif_self_dance": "{mention} 独舞派对！💃",
+  "bs_preview": "🔍 [预览]({url})"
 }

@@ -260,5 +260,6 @@
   "h_laugh": "Laugh at someone! (laugh @user)",
   "h_cry": "Cry because of someone! (cry @user)",
   "h_angry": "Be angry at someone! (angry @user)",
-  "h_dance": "Dance with someone! (dance @user)"
+  "h_dance": "Dance with someone! (dance @user)",
+  "bs_preview": "🔍 [Preview]({url})"
 }
