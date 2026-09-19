@@ -190,10 +190,18 @@ def render_collection_card(title: str, sections: list, footer: str = ""):
 
     W = 900
     PAD = 28
-    TILE_W, TILE_H = 96, 112
+    TILE_W, TILE_H = 96, 132
     GAP = 10
     ICON = 58
     NEUTRAL = (88, 101, 124)
+
+    def _fit_text(text, font, max_w):
+        """Tile me samaane ke liye naam chhota karo (…)."""
+        if d.textlength(text, font=font) <= max_w:
+            return text
+        while text and d.textlength(text + "…", font=font) > max_w:
+            text = text[:-1]
+        return text + "…"
 
     secs = [s for s in sections if s["cells"]]
     H = 84
@@ -236,7 +244,13 @@ def render_collection_card(title: str, sections: list, footer: str = ""):
                 if img:
                     break
             if img:
-                card.alpha_composite(img.resize((ICON, ICON)), (x + (TILE_W - ICON) // 2, ty + 12))
+                card.alpha_composite(img.resize((ICON, ICON)), (x + (TILE_W - ICON) // 2, ty + 10))
+            # naam (icon ke niche)
+            nm = cell.get("name")
+            if nm:
+                nf = _font(14, True)
+                d.text((x + (TILE_W - d.textlength(nm_t := _fit_text(nm, nf, TILE_W - 8))) / 2,
+                        ty + 72), nm_t, font=nf, fill=(228, 232, 240))
             # badge (top-left, e.g. store index)
             badge = cell.get("badge")
             if badge:
@@ -250,7 +264,7 @@ def render_collection_card(title: str, sections: list, footer: str = ""):
                 fnt = _font(15, True)
                 cw = d.textlength(cnt, font=fnt)
                 px1 = x + (TILE_W - (cw + 16)) / 2
-                py1 = ty + TILE_H - 32
+                py1 = ty + TILE_H - 30
                 d.rounded_rectangle([px1, py1, px1 + cw + 16, py1 + 22], radius=11,
                                     fill=(24, 26, 31, 240))
                 d.text((px1 + 8, py1 + 2), cnt, font=fnt, fill=(255, 209, 84))
@@ -384,12 +398,14 @@ class Animals(commands.Cog):
             seen = {}
             for a in animals:
                 sid = a["species"]["id"]
-                ent = seen.setdefault(sid, {"emoji": a["species"]["emoji"], "n": 0, "star": False,
+                ent = seen.setdefault(sid, {"emoji": a["species"]["emoji"], "name": a["species"]["name"],
+                                            "n": 0, "star": False,
                                             "rarity": a["species"]["rarity"]})
                 ent["n"] += 1
                 if active and a["id"] == active["id"]:
                     ent["star"] = True
-            cells = [{"emoji": e["emoji"], "count": str(e["n"]) if e["n"] > 1 else "",
+            cells = [{"emoji": e["emoji"], "name": e["name"],
+                      "count": str(e["n"]) if e["n"] > 1 else "",
                       "star": e["star"], "ring": RARITY_RING.get(e["rarity"])}
                      for e in seen.values()]
 
@@ -406,11 +422,11 @@ class Animals(commands.Cog):
 
         # ---- inventory sections (category-wise) ----
         items = await database.inv_all(member.id)
-        food_cells = [{"emoji": FOODS[iid]["emoji"], "count": str(qty), "star": False}
+        food_cells = [{"emoji": FOODS[iid]["emoji"], "name": FOODS[iid]["name"], "count": str(qty), "star": False}
                       for itype, iid, qty in items if itype == "food" and iid in FOODS]
         shard_cells = [{"emoji": SHARD_ICON, "count": str(qty), "star": False}
                        for itype, iid, qty in items if itype == "shard" and iid == "fuzon"]
-        abil_cells = [{"emoji": ABILITIES[iid]["emoji"], "count": str(qty), "star": False}
+        abil_cells = [{"emoji": ABILITIES[iid]["emoji"], "name": ABILITIES[iid]["name"], "count": str(qty), "star": False}
                       for itype, iid, qty in items if itype == "ability" and iid in ABILITIES]
 
         sections = [{"label": i18n.t(lang, "an_zoo_animals"), "cells": cells}]

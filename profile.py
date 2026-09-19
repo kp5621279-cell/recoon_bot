@@ -527,8 +527,8 @@ class Profile(commands.Cog):
                 return render_fn_sync(t, s, f)
         if section == "animals":
             species = [s for s in await database.get_all_species() if s["in_store"]]
-            cells = [{"emoji": s["emoji"], "count": compact_price(s["price"]), "star": False,
-                      "ring": RARITY_RING.get(s["rarity"]), "badge": f"#{i}"}
+            cells = [{"emoji": s["emoji"], "name": s["name"], "count": compact_price(s["price"]),
+                      "star": False, "ring": RARITY_RING.get(s["rarity"]), "badge": f"#{i}"}
                      for i, s in enumerate(species, 1)]
             title = i18n.t(lang, "an_shop_animals")
             buf = await render_fn(
@@ -541,8 +541,8 @@ class Profile(commands.Cog):
             return embed, discord.File(buf, "shop.png")
         if section == "food":
             title = i18n.t(lang, "an_shop_food")
-            cells = [{"emoji": f["emoji"], "count": compact_price(f["price"]), "star": False,
-                      "ring": (255, 130, 130)}
+            cells = [{"emoji": f["emoji"], "name": f["name"], "count": compact_price(f["price"]),
+                      "star": False, "ring": (255, 130, 130)}
                      for f in FOODS.values()]
             buf = await render_fn(
                 title,
@@ -554,8 +554,8 @@ class Profile(commands.Cog):
             return embed, discord.File(buf, "shop.png")
         if section == "abilities":
             title = i18n.t(lang, "an_shop_abilities")
-            cells = [{"emoji": a["emoji"], "count": compact_price(a["price"]), "star": False,
-                      "ring": (255, 220, 120)}
+            cells = [{"emoji": a["emoji"], "name": a["name"], "count": compact_price(a["price"]),
+                      "star": False, "ring": (255, 220, 120)}
                      for a in ABILITIES.values()]
             buf = await render_fn(
                 title,
