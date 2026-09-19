@@ -21,13 +21,28 @@ ytdl_format_options = {
     'no_warnings': True,
     'default_search': 'auto',
     'source_address': '0.0.0.0',
-    'extractor_args': {'youtube': {'player_client': ['android', 'web']}}
+    # 'tv' client aksar YouTube ke "confirm you're not a bot" check ko bypass karta hai
+    'extractor_args': {'youtube': {'player_client': ['tv', 'android', 'web']}}
 }
 
-# Add cookies if the file exists
+# Cookies support: local PC par cookies.txt file, Railway par COOKIES_B64 env var
 import os
-if os.path.exists('cookies.txt'):
-    ytdl_format_options['cookiefile'] = 'cookies.txt'
+import base64 as _base64
+
+_COOKIES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cookies.txt")
+
+# Railway/hosted: COOKIES_B64 (base64 of cookies.txt) ko file me likh lo
+_cookies_b64 = os.getenv("COOKIES_B64", "").strip()
+if _cookies_b64 and not os.path.exists(_COOKIES_PATH):
+    try:
+        with open(_COOKIES_PATH, "wb") as _f:
+            _f.write(_base64.b64decode(_cookies_b64))
+        print("✅ cookies.txt COOKIES_B64 env var se ban gayi.")
+    except Exception as _e:
+        print(f"⚠️ COOKIES_B64 decode fail: {_e}")
+
+if os.path.exists(_COOKIES_PATH):
+    ytdl_format_options['cookiefile'] = _COOKIES_PATH
 
 ffmpeg_options = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
@@ -255,9 +270,19 @@ class Music(commands.Cog):
             view = MusicControlView(self, ctx.guild.id)
             await ctx.send(embed=embed, view=view)
         except Exception as e:
+            desc = f"Error playing song: `{str(e)}`"
+            if "Sign in to confirm" in str(e) or "not a bot" in str(e):
+                desc = (
+                    "❌ YouTube ne bot-detect kar liya (server IP problem).\n\n"
+                    "**Fix:** YouTube cookies add karni hongi -\n"
+                    "1. Browser me YouTube login karo (throwaway account best)\n"
+                    "2. `cookies.txt` export karo (browser extension se)\n"
+                    "3. PowerShell me: `[Convert]::ToBase64String([IO.File]::ReadAllBytes(\"cookies.txt\")) | Set-Clipboard`\n"
+                    "4. Railway → Variables → `COOKIES_B64` paste karo"
+                )
             error_embed = discord.Embed(
                 title="❌ Error",
-                description=f"Error playing song: `{str(e)}`",
+                description=desc,
                 color=discord.Color.red()
             )
             error_embed.set_thumbnail(url=BANNER_URL)
