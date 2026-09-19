@@ -335,5 +335,20 @@
   "an_buy_done": "✅ 以 {price} {coin} 购买了 {emoji} **{name}**！（`{ref}`）\n用它战斗：`{prefix}use {ref}`",
   "an_buy_food_done": "✅ {emoji} **{name}** 已加入背包！喂食：`{prefix}feeda a<id> <食物>`",
   "an_buy_ability_done": "✅ {emoji} **{name}** 已添加！装备：`{prefix}ability a<id> <名称>`",
-  "f_not_yours": "这个挑战不是给你的！"
+  "f_not_yours": "这个挑战不是给你的！",
+  "h_zoo": "查看你的动物收藏（或别人的）。",
+  "h_hunt": "去丛林打猎 - 获得新动物（1小时冷却）。",
+  "h_myanimal": "查看你的出战动物属性。",
+  "h_use": "选择出战动物：use a3",
+  "h_feeda": "喂养你的动物：feeda a1 pizza",
+  "h_breed": "让两只动物繁殖（2个Fuzon碎片）：breed a1 a2",
+  "h_inv": "查看背包 - 食物、碎片、能力。",
+  "h_ability": "给动物装上能力：ability a1 lightning",
+  "h_release": "放生动物换取金币。",
+  "h_anick": "给动物改名：anick a1 Sheru",
+  "h_fight": "向别人发起动物对战：fight @user 500",
+  "h_shop": "打开商店 - 横幅、动物、食物、能力。",
+  "h_top": "服务器排行榜 - 等级、金币、连胜、游戏。",
+  "h_equipb": "装备你拥有的横幅：equipb 3",
+  "h_links": "显示已保存的链接列表。"
 }

@@ -355,5 +355,20 @@
   "an_buy_done": "✅ {emoji} **{name}** kharida {price} {coin} me! (`{ref}`)\nIsse fight karo: `{prefix}use {ref}`",
   "an_buy_food_done": "✅ {emoji} **{name}** inventory me aa gaya! Khilao: `{prefix}feeda a<id> <khana>`",
   "an_buy_ability_done": "✅ {emoji} **{name}** aa gayi! Lagao: `{prefix}ability a<id> <naam>`",
-  "f_not_yours": "Ye challenge tumhare liye nahi hai!"
+  "f_not_yours": "Ye challenge tumhare liye nahi hai!",
+  "h_zoo": "Apna (ya kisi aur ka) animal collection dekho.",
+  "h_hunt": "Jungle me hunt karo - naya animal dhundo (1h cooldown).",
+  "h_myanimal": "Apne fighting animal ke stats dekho.",
+  "h_use": "Fighting animal chuno: use a3",
+  "h_feeda": "Animal ko khilao, power wapas pao: feeda a1 pizza",
+  "h_breed": "Do animals ki breeding (2 Fuzon Shard): breed a1 a2",
+  "h_inv": "Inventory dekho - khana, shards, abilities.",
+  "h_ability": "Animal par ability lagao: ability a1 lightning",
+  "h_release": "Animal chhod do, coins milenge.",
+  "h_anick": "Animal ka naam badlo: anick a1 Sheru",
+  "h_fight": "Kisi ko animal fight challenge do: fight @user 500",
+  "h_shop": "Shop kholo - banners, animals, khana, abilities.",
+  "h_top": "Server leaderboard - level, coins, streak, games.",
+  "h_equipb": "Apna banner lagao: equipb 3",
+  "h_links": "Saved media links ki list dikhao."
 }

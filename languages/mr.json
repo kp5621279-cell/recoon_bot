@@ -335,5 +335,20 @@
   "an_buy_done": "✅ {emoji} **{name}** {price} {coin} मध्ये विकत घेतला! (`{ref}`)\nयाशी लढा: `{prefix}use {ref}`",
   "an_buy_food_done": "✅ {emoji} **{name}** इन्व्हेंटरीमध्ये आले! खावा घे: `{prefix}feeda a<id> <खाणे>`",
   "an_buy_ability_done": "✅ {emoji} **{name}** आली! लावा: `{prefix}ability a<id> <नाव>`",
-  "f_not_yours": "हे आव्हान तुझ्यासाठी नाही!"
+  "f_not_yours": "हे आव्हान तुझ्यासाठी नाही!",
+  "h_zoo": "Tumcha (kinva dusryacha) prani sangrah paha.",
+  "h_hunt": "Jangalat shikar kara - navin prani milava (1 tas cooldown).",
+  "h_myanimal": "Tumchya ladhu pranyache aakde paha.",
+  "h_use": "Ladhu prani nivda: use a3",
+  "h_feeda": "Pranyala khau ghala: feeda a1 pizza",
+  "h_breed": "Don pranyanchi breeding (2 Fuzon Shard): breed a1 a2",
+  "h_inv": "Satha paha - khane, shard, kshamata.",
+  "h_ability": "Pranyavar kshamata lava: ability a1 lightning",
+  "h_release": "Prani soda ani nani milava.",
+  "h_anick": "Pranyache nav badla: anick a1 Sheru",
+  "h_fight": "Konala prani ladhyasathi avhan dya: fight @user 500",
+  "h_shop": "Dukan ughada - banner, prani, khane, kshamata.",
+  "h_top": "Server leaderboard - level, nani, satatya, game.",
+  "h_equipb": "Tumche banner lava: equipb 3",
+  "h_links": "Save kelele links list dakhva."
 }

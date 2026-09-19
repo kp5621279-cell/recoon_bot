@@ -335,5 +335,20 @@
   "an_buy_done": "✅ {emoji} **{name}** dibeli seharga {price} {coin}! (`{ref}`)\n Bertarunglah dengannya: `{prefix}use {ref}`",
   "an_buy_food_done": "✅ {emoji} **{name}** masuk inventaris! Beri makan: `{prefix}feeda a<id> <makanan>`",
   "an_buy_ability_done": "✅ {emoji} **{name}** ditambahkan! Pasang: `{prefix}ability a<id> <nama>`",
-  "f_not_yours": "Tantangan ini bukan untukmu!"
+  "f_not_yours": "Tantangan ini bukan untukmu!",
+  "h_zoo": "Lihat koleksi hewanmu (atau milik orang lain).",
+  "h_hunt": "Berburu di hutan - temukan hewan baru (cooldown 1 jam).",
+  "h_myanimal": "Lihat stats hewan tempur aktifmu.",
+  "h_use": "Pilih hewan tempurmu: use a3",
+  "h_feeda": "Beri makan hewanmu: feeda a1 pizza",
+  "h_breed": "Kawinkan dua hewan (2 Fuzon Shard): breed a1 a2",
+  "h_inv": "Lihat inventarismu - makanan, shard, ability.",
+  "h_ability": "Pasang ability ke hewanmu: ability a1 lightning",
+  "h_release": "Lepaskan hewan dan dapatkan koin.",
+  "h_anick": "Ganti nama hewanmu: anick a1 Sheru",
+  "h_fight": "Tantang seseorang bertarung: fight @user 500",
+  "h_shop": "Buka toko - banner, hewan, makanan, ability.",
+  "h_top": "Papan peringkat server - level, koin, streak, game.",
+  "h_equipb": "Pakai banner milikmu: equipb 3",
+  "h_links": "Tampilkan daftar link yang disimpan."
 }

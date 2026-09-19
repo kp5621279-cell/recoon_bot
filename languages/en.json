@@ -355,5 +355,20 @@
   "an_buy_done": "✅ {emoji} **{name}** purchased for {price} {coin}! (`{ref}`)\nFight with it: `{prefix}use {ref}`",
   "an_buy_food_done": "✅ {emoji} **{name}** added to inventory! Feed: `{prefix}feeda a<id> <food>`",
   "an_buy_ability_done": "✅ {emoji} **{name}** added! Apply: `{prefix}ability a<id> <name>`",
-  "f_not_yours": "This challenge is not for you!"
+  "f_not_yours": "This challenge is not for you!",
+  "h_zoo": "See your animal collection (or someone else's).",
+  "h_hunt": "Hunt in the jungle - find a new animal (1h cooldown).",
+  "h_myanimal": "Show your active fighting animal's stats.",
+  "h_use": "Choose your fighting animal: use a3",
+  "h_feeda": "Feed your animal to restore power: feeda a1 pizza",
+  "h_breed": "Breed two animals (2 Fuzon Shards): breed a1 a2",
+  "h_inv": "Show your inventory - food, shards, abilities.",
+  "h_ability": "Attach an ability to your animal: ability a1 lightning",
+  "h_release": "Release an animal back to the wild for coins.",
+  "h_anick": "Rename your animal: anick a1 Sheru",
+  "h_fight": "Challenge someone to an animal fight: fight @user 500",
+  "h_shop": "Open the shop - banners, animals, food, abilities.",
+  "h_top": "Server leaderboards - level, coins, streak, games.",
+  "h_equipb": "Equip a banner you own: equipb 3",
+  "h_links": "Show the saved media links list."
 }

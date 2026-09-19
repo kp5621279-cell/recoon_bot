@@ -335,5 +335,20 @@
   "an_buy_done": "✅ {price} {coin}で {emoji} **{name}** を購入！（`{ref}`）\nこれで戦う：`{prefix}use {ref}`",
   "an_buy_food_done": "✅ {emoji} **{name}**を持ち物に追加！エサ：`{prefix}feeda a<id> <食べ物>`",
   "an_buy_ability_done": "✅ {emoji} **{name}**を追加！装備：`{prefix}ability a<id> <名前>`",
-  "f_not_yours": "この挑戦はあなた向けではありません！"
+  "f_not_yours": "この挑戦はあなた向けではありません！",
+  "h_zoo": "自分（または他のユーザー）の動物コレクションを表示。",
+  "h_hunt": "ジャングルで狩り - 新しい動物をゲット（1時間クールダウン）。",
+  "h_myanimal": "アクティブな戦闘動物のステータスを表示。",
+  "h_use": "戦闘動物を選ぶ：use a3",
+  "h_feeda": "動物にエサをあげる：feeda a1 pizza",
+  "h_breed": "2匹の動物を交配（Fuzon欠片2個）：breed a1 a2",
+  "h_inv": "インベントリを表示 - 食料・欠片・アビリティ。",
+  "h_ability": "動物にアビリティを装着：ability a1 lightning",
+  "h_release": "動物を放してコインをもらう。",
+  "h_anick": "動物の名前を変更：anick a1 Sheru",
+  "h_fight": "動物バトルを挑む：fight @user 500",
+  "h_shop": "ショップを開く - バナー・動物・食料・アビリティ。",
+  "h_top": "サーバーランキング - レベル・コイン・連続・ゲーム。",
+  "h_equipb": "所有バナーを装備：equipb 3",
+  "h_links": "保存されたリンク一覧を表示。"
 }

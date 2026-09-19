@@ -335,5 +335,20 @@
   "an_buy_done": "✅ {emoji} **{name}** acheté pour {price} {coin} ! (`{ref}`)\nCombattez avec : `{prefix}use {ref}`",
   "an_buy_food_done": "✅ {emoji} **{name}** ajouté à l'inventaire ! Nourrissez : `{prefix}feeda a<id> <nourriture>`",
   "an_buy_ability_done": "✅ {emoji} **{name}** ajoutée ! Appliquez : `{prefix}ability a<id> <nom>`",
-  "f_not_yours": "Ce défi n'est pas pour vous !"
+  "f_not_yours": "Ce défi n'est pas pour vous !",
+  "h_zoo": "Voir votre collection d'animaux (ou celle d'un autre).",
+  "h_hunt": "Chassez dans la jungle - trouvez un nouvel animal (1h de cooldown).",
+  "h_myanimal": "Affichez les stats de votre animal de combat.",
+  "h_use": "Choisissez votre animal de combat : use a3",
+  "h_feeda": "Nourrissez votre animal : feeda a1 pizza",
+  "h_breed": "Faites se reproduire deux animaux (2 eclats Fuzon) : breed a1 a2",
+  "h_inv": "Affichez votre inventaire - nourriture, eclats, capacites.",
+  "h_ability": "Attachez une capacite a votre animal : ability a1 lightning",
+  "h_release": "Relachez un animal contre des pieces.",
+  "h_anick": "Renommez votre animal : anick a1 Sheru",
+  "h_fight": "Defiez quelqu'un en combat d'animaux : fight @user 500",
+  "h_shop": "Ouvrez la boutique - bannieres, animaux, nourriture, capacites.",
+  "h_top": "Classements du serveur - niveau, pieces, serie, parties.",
+  "h_equipb": "Equipez une banniere possedee : equipb 3",
+  "h_links": "Affiche la liste des liens sauvegardes."
 }

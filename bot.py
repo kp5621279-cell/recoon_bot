@@ -152,8 +152,7 @@ class CustomHelpCommand(commands.HelpCommand):
             elif command.name in ["bal", "daily", "req", "pay", "pray", "luck", "lkf", "top",
                                   "afk", "profile", "shop", "banners", "buy", "banner", "equipb", "setabout"]:
                 econ_cmds.append(cmd_info)
-                econ_cmds.append(cmd_info)
-            elif command.name in ["zoo", "hunt", "myanimal", "use", "feed", "breed", "inv", "ability", "release", "anick"]:
+            elif command.name in ["zoo", "hunt", "myanimal", "use", "feeda", "breed", "inv", "ability", "release", "anick", "fight"]:
                 animal_cmds.append(cmd_info)
             elif command.name in ["ping", "help", "invite", "lang", "set"]:
                 config_cmds.append(cmd_info)
