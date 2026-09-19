@@ -16,8 +16,8 @@ BANNER_URL = "https://cdn.discordapp.com/emojis/1550526211388612608.png?size=512
 COIN = "<:coin:1550545065397584066>"
 
 FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
-CARD_W, CARD_H = 1000, 400
-PANEL_TOP = 210  # iske niche solid stats panel hai - banner sirf upar dikhta hai
+CARD_W, CARD_H = 1000, 520
+PANEL_TOP = 310  # iske niche solid stats panel hai - banner area lamba (details ke liye)
 CARD_QUALITY = 88  # JPG quality (chhoti file, achha look)
 
 # Default banners: gradient hex colors (top->bottom). Prices in coins.
@@ -74,12 +74,12 @@ def banner_image(banner: dict, w: int = CARD_W, h: int = CARD_H) -> Image.Image:
             img = Image.open(banner["file_path"]).convert("RGB")
             # Background: pura card cover, blur
             bg = img.resize((w, h)).filter(ImageFilter.GaussianBlur(16))
-            # Foreground: width fit, visible area me center
-            scale = w / img.width
-            fg_h = int(img.height * scale)
-            fg = img.resize((w, fg_h))
-            y = (PANEL_TOP - fg_h) // 2
-            bg.paste(fg, (0, y))
+            # Foreground: height fit to visible banner area, centered (wide image puri dikhe)
+            scale = PANEL_TOP / img.height
+            fg_w = int(img.width * scale)
+            fg = img.resize((fg_w, PANEL_TOP))
+            x = (w - fg_w) // 2
+            bg.paste(fg, (x, 0))
             return bg
         except Exception:
             pass
@@ -124,7 +124,7 @@ def render_profile_card(
     dr.rectangle([0, panel_top, CARD_W, CARD_H], fill=(15, 15, 22, 235))
 
     # ---------------- Avatar circle ----------------
-    AV = 150
+    AV = 170
     ax, ay = 40, 40
     try:
         raw = Image.open(io.BytesIO(avatar_bytes(avatar_url))).convert("RGB").resize((AV, AV))
