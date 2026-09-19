@@ -211,8 +211,7 @@ class Aviator(commands.Cog):
         # Take the bet up front, like the coin flip does.
         await database.update_coins(ctx.author.id, -bet)
 
-        from bot import consume_luck, luck_shift
-        shift = luck_shift(await consume_luck(ctx.author.id))
+        shift = database.luck_shift(await database.consume_luck(ctx.author.id))
         round_ = AviatorRound(self, ctx.author, bet, user_data["coins"], roll_crash_point(shift))
         self.active[ctx.author.id] = round_
         round_.view = AviatorView(round_)

@@ -416,10 +416,9 @@ class ModeSelectView(discord.ui.View):
         for child in self.children:
             child.disabled = True
 
-        from bot import consume_luck, luck_shift
         game = MinesGame(
             self.ctx.author.id, self.bet, size, bombs, label,
-            luck_shift=luck_shift(await consume_luck(self.ctx.author.id)),
+            luck_shift=database.luck_shift(await database.consume_luck(self.ctx.author.id)),
         )
         MINES_ACTIVE[self.ctx.author.id] = game
         await database.update_coins(self.ctx.author.id, -self.bet)
@@ -483,7 +482,10 @@ class Mines(commands.Cog):
             return await ctx.send(i18n.t(lang, "m_poor", coin=COIN, balance=user['coins'] if user else 0, mention=ctx.author.mention))
 
         size, bombs, label = parsed
-        game = MinesGame(ctx.author.id, bet, size, bombs, label)
+        game = MinesGame(
+            ctx.author.id, bet, size, bombs, label,
+            luck_shift=database.luck_shift(await database.consume_luck(ctx.author.id)),
+        )
         MINES_ACTIVE[ctx.author.id] = game
         await database.update_coins(ctx.author.id, -bet)
         await game.start(ctx)

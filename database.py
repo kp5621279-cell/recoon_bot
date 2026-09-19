@@ -315,6 +315,21 @@ async def add_luck(user_id: int, amount: float) -> float:
     await set_luck(user_id, new_value)
     return new_value
 
+
+# Ek game start hote waqt itna luck use hota hai (100% luck = ~3 games)
+LUCK_PER_GAME = 35.0
+
+async def consume_luck(user_id: int) -> float:
+    """Game start par luck ka min(luck, 35)% use karo. Bacha hua luck return."""
+    luck = await get_luck(user_id)
+    if luck <= 0:
+        return 0.0
+    return await add_luck(user_id, -min(luck, LUCK_PER_GAME))
+
+def luck_shift(luck: float) -> float:
+    """Luck ko -0.35..+0.35 factor me convert karo (games random rolls me mix karte hain)."""
+    return max(-0.35, min(0.35, luck / 100.0))
+
 async def get_luck_free_time(user_id: int) -> float:
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute('SELECT last_luck_free FROM users WHERE user_id = ?', (user_id,)) as cursor:

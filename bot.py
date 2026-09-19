@@ -31,23 +31,6 @@ LUCK_PER_PRAY = 15.0   # ek prayer kitna luck deta hai
 LUCK_FREE_DAILY = 10.0  # lkf (daily free luck)
 LUCK_PER_GAME = 35.0    # ek game khelne par kitna luck consume hota hai
 
-async def consume_luck(user_id: int) -> float:
-    """Ek game start hote waqt luck ka min(luck, 35)% use karo. Bacha luck return."""
-    luck = await database.get_luck(user_id)
-    if luck <= 0:
-        return 0.0
-    used = min(luck, LUCK_PER_GAME)
-    return await database.add_luck(user_id, -used)
-
-def luck_shift(luck: float) -> float:
-    """Luck ko 0-1 signed factor me convert karo (-0.35 se +0.35).
-
-    Games isko random rolls me mix karte hain: positive luck (prayers/free)
-    outcome player ke favour me khiska deta hai, aur har game luck thoda
-    kam kar deta hai (consume_luck).
-    """
-    return max(-0.35, min(0.35, luck / 100.0))
-
 # Dynamic prefix getter
 async def get_dynamic_prefix(bot, message):
     if not message.guild:
@@ -831,7 +814,7 @@ def _today() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
-@bot.command(name="pray", aliases=["p"])
+@bot.command(name="pray")
 async def pray(ctx: commands.Context, target: discord.Member = None):
     """Pray for someone to give them +15% luck (once per day per target)."""
     lang = await database.get_lang(ctx.author.id)

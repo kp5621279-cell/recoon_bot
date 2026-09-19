@@ -77,8 +77,7 @@ class Slots(commands.Cog):
         try:
             await database.update_coins(ctx.author.id, -bet)
 
-            from bot import consume_luck, luck_shift
-            reels = spin(max(0.0, luck_shift(await consume_luck(ctx.author.id))))
+            reels = spin(max(0.0, database.luck_shift(await database.consume_luck(ctx.author.id))))
             mult, win_key = evaluate(reels, bet)
             win_amount = int(bet * mult)
 
