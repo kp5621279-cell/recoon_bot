@@ -169,5 +169,6 @@
   "h_buy": "बॅनर विकत घे: buy banner <id>.",
   "h_banner": "घेतलेले बॅनर लावा.",
   "h_setabout": "प्रोफाइलचे About me सेट करा.",
-  "h_addbanner": "(Owner) इमेज attach करून custom बॅनर टाका."
+  "h_addbanner": "(Owner) इमेज attach करून custom बॅनर टाका.",
+  "level_up": "🎉 {user} **LEVEL UP!** तू **Level {level}** पोहोचलास! बोनस: **+{amount}** {coin}"
 }

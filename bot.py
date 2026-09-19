@@ -32,13 +32,26 @@ LUCK_PER_PRAY = 15.0   # ek prayer kitna luck deta hai
 LUCK_FREE_DAILY = 10.0  # lkf (daily free luck)
 LUCK_PER_GAME = 35.0    # ek game khelne par kitna luck consume hota hai
 XP_PER_GAME = 10        # har game khelne par XP
+LEVEL_BONUS_COINS = 500  # level-up par bonus coins
 
-async def game_xp(user_id: int):
-    """Game start par XP do (profile level ke liye). Fire-and-forget."""
+async def game_xp(ctx_or_user, amount: int = None):
+    """XP do aur level-up hone par channel me celebrate karo.
+
+    ctx_or_user = commands.Context (channel me notice bhejega) ya sirf user_id (silent).
+    """
     try:
-        await database.add_xp(user_id, XP_PER_GAME)
-    except Exception:
-        pass
+        user_id = ctx_or_user.author.id if hasattr(ctx_or_user, "author") else ctx_or_user
+        old_level, new_level = await database.add_xp_with_levelup(user_id, amount or XP_PER_GAME)
+        if new_level > old_level and hasattr(ctx_or_user, "channel"):
+            lang = await database.get_lang(user_id)
+            await ctx_or_user.send(i18n.t(
+                lang, "level_up",
+                user=f"<@{user_id}>", level=new_level, coin=COIN, amount=LEVEL_BONUS_COINS,
+            ))
+            if LEVEL_BONUS_COINS > 0:
+                await database.update_coins(user_id, LEVEL_BONUS_COINS)
+    except Exception as e:
+        print(f"game_xp error: {e}")
 
 # Dynamic prefix getter
 async def get_dynamic_prefix(bot, message):
@@ -1020,8 +1033,8 @@ async def daily_reward(ctx: commands.Context):
     if streak_bonus:
         await database.update_coins(ctx.author.id, streak_bonus)
 
-    # XP: daily claim = +25
-    await database.add_xp(ctx.author.id, 25)
+    # XP: daily claim = +25 (level-up celebrate ho sakta hai)
+    await game_xp(ctx, 25)
 
     new_bal = user_data["coins"] + reward + streak_bonus
     await ctx.send(i18n.t(lang, "daily_given", amount=reward, coin=COIN, balance=new_bal, mention=ctx.author.mention))

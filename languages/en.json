@@ -169,5 +169,6 @@
   "h_buy": "Buy a banner: buy banner <id>.",
   "h_banner": "Equip an owned banner.",
   "h_setabout": "Set your profile's About me text.",
-  "h_addbanner": "(Owner) Add a custom banner from an attached image."
+  "h_addbanner": "(Owner) Add a custom banner from an attached image.",
+  "level_up": "🎉 {user} **LEVEL UP!** You reached **Level {level}**! Bonus: **+{amount}** {coin}"
 }

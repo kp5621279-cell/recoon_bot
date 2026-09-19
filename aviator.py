@@ -211,7 +211,8 @@ class Aviator(commands.Cog):
         # Take the bet up front, like the coin flip does.
         await database.update_coins(ctx.author.id, -bet)
         try:
-            await database.add_xp(ctx.author.id, 10)
+            from bot import game_xp
+            await game_xp(ctx)
         except Exception:
             pass
 

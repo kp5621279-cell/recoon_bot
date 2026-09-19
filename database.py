@@ -456,6 +456,17 @@ async def add_xp(user_id: int, amount: int):
         await db.execute('UPDATE users SET xp = xp + ? WHERE user_id = ?', (amount, user_id))
         await db.commit()
 
+async def add_xp_with_levelup(user_id: int, amount: int):
+    """XP add karo aur level-up detect karo.
+
+    Returns: (old_level, new_level) - same hone par (n, n).
+    """
+    old_xp = await get_xp(user_id)
+    old_level = level_from_xp(old_xp)
+    await add_xp(user_id, amount)
+    new_level = level_from_xp(old_xp + amount)
+    return (old_level, new_level)
+
 async def get_xp(user_id: int) -> int:
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute('SELECT xp FROM users WHERE user_id = ?', (user_id,)) as cursor:

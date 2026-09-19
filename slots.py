@@ -76,7 +76,8 @@ class Slots(commands.Cog):
         SLOTS_ACTIVE.add(ctx.author.id)
         try:
             await database.update_coins(ctx.author.id, -bet)
-            await database.add_xp(ctx.author.id, 10)
+            from bot import game_xp
+            await game_xp(ctx)
 
             reels = spin(max(0.0, database.luck_shift(await database.consume_luck(ctx.author.id))))
             mult, win_key = evaluate(reels, bet)

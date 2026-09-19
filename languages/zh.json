@@ -169,5 +169,6 @@
   "h_buy": "购买横幅：buy banner <id>。",
   "h_banner": "装备已拥有的横幅。",
   "h_setabout": "设置资料卡的关于我文本。",
-  "h_addbanner": "（管理员）从附件图片添加自定义横幅。"
+  "h_addbanner": "（管理员）从附件图片添加自定义横幅。",
+  "level_up": "🎉 {user} **升级！** 你达到了 **等级 {level}**！奖励：**+{amount}** {coin}"
 }

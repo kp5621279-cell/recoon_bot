@@ -169,5 +169,6 @@
   "h_buy": "バナーを購入：buy banner <id>。",
   "h_banner": "所持バナーを装備。",
   "h_setabout": "プロフィールの自己紹介を設定。",
-  "h_addbanner": "（Owner）添付画像からカスタムバナーを追加。"
+  "h_addbanner": "（Owner）添付画像からカスタムバナーを追加。",
+  "level_up": "🎉 {user} **レベルアップ！** **レベル {level}** に到達！ボーナス：**+{amount}** {coin}"
 }
