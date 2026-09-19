@@ -117,10 +117,10 @@ class LanguageView(discord.ui.View):
         self.user_id = user_id
 
     @staticmethod
-    def prompt_embed(lang: str, prefix: str = "!") -> discord.Embed:
+    def prompt_embed(cur_lang: str, prefix: str = "!") -> discord.Embed:
         embed = discord.Embed(
-            title=i18n.t(lang, "lang_title"),
-            description=i18n.t(lang, "lang_desc", lang=i18n.LANG_NAMES.get(lang, lang), prefix=prefix),
+            title=i18n.t(cur_lang, "lang_title"),
+            description=i18n.t(cur_lang, "lang_desc", cur_lang=i18n.LANG_NAMES.get(cur_lang, cur_lang), prefix=prefix),
             color=discord.Color.blurple(),
         )
         embed.set_thumbnail(url=BANNER_URL)
@@ -148,7 +148,7 @@ class LanguageView(discord.ui.View):
         for child in self.children:
             child.disabled = True
         embed = discord.Embed(
-            title=i18n.t(code, "lang_set", lang=i18n.LANG_NAMES[code]),
+            title=i18n.t(code, "lang_set", cur_lang=i18n.LANG_NAMES[code]),
             color=discord.Color.green(),
         )
         embed.set_thumbnail(url=BANNER_URL)
