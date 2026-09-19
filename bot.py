@@ -237,10 +237,10 @@ class CoinRequestView(discord.ui.View):
 
 
 class BeastModeView(discord.ui.View):
-    """Beast Mode magic powers - dropdown options add hote rahenge."""
+    """Beast Mode magic powers - owner ke liye special controls."""
 
     def __init__(self, target: discord.abc.User, actor: discord.abc.User):
-        super().__init__(timeout=60.0)
+        super().__init__(timeout=120.0)
         self.target = target
         self.actor = actor
 
@@ -250,10 +250,10 @@ class BeastModeView(discord.ui.View):
         max_values=1,
         options=[
             discord.SelectOption(
-                label="Unlimited Videos",
-                description="Is user ko unlimited sendvdo quota do.",
-                emoji="🎬",
-                value="unlimited_videos",
+                label="Give Coins",
+                description="Is user ko apne hisab se coins do (ya lo).",
+                emoji="💰",
+                value="give_coins",
             ),
         ],
     )
@@ -261,19 +261,53 @@ class BeastModeView(discord.ui.View):
         if interaction.user.id != self.actor.id:
             return await interaction.response.send_message("❌ Ye command tumhare liye nahi hai!", ephemeral=True)
 
-        for child in self.children:
+        if select.values[0] == "give_coins":
+            await interaction.response.send_modal(GiveCoinsModal(self.target, self))
+
+
+class GiveCoinsModal(discord.ui.Modal):
+    """Beast Mode: target ko jitne chaho coins do (negative = wapas lo)."""
+
+    def __init__(self, target: discord.abc.User, beast_view: BeastModeView):
+        super().__init__(title=f"💰 {target.display_name[:20]} ko coins do", timeout=300)
+        self.target = target
+        self.beast_view = beast_view
+        self.amount_input = discord.ui.TextInput(
+            label="Amount (negative = coins wapas lo)",
+            placeholder="Jaise: 5000",
+            min_length=1,
+            max_length=12,
+            required=True,
+        )
+        self.add_item(self.amount_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        raw = self.amount_input.value.strip().replace(",", "").replace(" ", "")
+        try:
+            amount = int(raw)
+        except ValueError:
+            return await interaction.response.send_message(
+                "❌ Amount sirf pura number hona chahiye (jaise `5000`).", ephemeral=True
+            )
+        if amount == 0:
+            return await interaction.response.send_message("❌ 0 coins ka kya hi karna... 😅", ephemeral=True)
+
+        new_balance = await database.give_coins(self.target.id, amount)
+
+        for child in self.beast_view.children:
             child.disabled = True
 
-        if select.values[0] == "unlimited_videos":
-            await database.set_video_unlimited(self.target.id, True)
-            embed = discord.Embed(
-                title="🔥 Beast Mode - Unlimited Videos",
-                description=f"**{self.target.mention}** ko ekdum **unlimited videos** mil gaya! 🎬\nAb wo jitni chahe `sendvdo` chala sakta hai - koi limit nahi.",
-                color=discord.Color.gold(),
-            )
-            embed.set_thumbnail(url=BANNER_URL)
-            await interaction.response.edit_message(content=None, embed=embed, view=self)
-            self.stop()
+        sign = "+" if amount > 0 else ""
+        embed = discord.Embed(
+            title="✅ Beast Mode - Coins transferred",
+            description=(
+                f"**{self.target.mention}** ko **{sign}{amount}** coins diye gaye.\n"
+                f"Naya balance: **{new_balance}** {COIN}"
+            ),
+            color=discord.Color.gold(),
+        )
+        embed.set_thumbnail(url=BANNER_URL)
+        await interaction.response.edit_message(embed=embed, view=self.beast_view)
 
 
 @bot.check
@@ -425,7 +459,7 @@ async def beast_mode(ctx: commands.Context, target: discord.User = None):
 
     embed = discord.Embed(
         title="🔥 Beast Mode",
-        description=f"**Target:** {target.mention}\nNiche dropdown se power chuno - abhi ek option hai, baad me aur add honge.",
+        description=f"**Target:** {target.mention}\nNiche dropdown se power chuno.",
         color=discord.Color.gold(),
     )
     embed.set_thumbnail(url=BANNER_URL)
