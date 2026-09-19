@@ -132,7 +132,7 @@ class CustomHelpCommand(commands.HelpCommand):
         is_owner = await self.context.bot.is_owner(self.context.author)
 
         # Categorize commands manually since we are not using Cogs
-        games_cmds, econ_cmds, config_cmds, music_cmds, admin_cmds, fun_cmds = [], [], [], [], [], []
+        games_cmds, econ_cmds, config_cmds, music_cmds, admin_cmds, fun_cmds, animal_cmds = [], [], [], [], [], [], []
 
         for command in await self.filter_commands(self.context.bot.commands, sort=True):
             # Help description pehle user ki language se, fallback docstring
@@ -152,6 +152,9 @@ class CustomHelpCommand(commands.HelpCommand):
             elif command.name in ["bal", "daily", "req", "pay", "pray", "luck", "lkf", "top",
                                   "afk", "profile", "shop", "banners", "buy", "banner", "equipb", "setabout"]:
                 econ_cmds.append(cmd_info)
+                econ_cmds.append(cmd_info)
+            elif command.name in ["zoo", "hunt", "myanimal", "use", "feed", "breed", "inv", "ability", "release", "anick"]:
+                animal_cmds.append(cmd_info)
             elif command.name in ["ping", "help", "invite", "lang", "set"]:
                 config_cmds.append(cmd_info)
             elif command.name in ["play", "join", "leave", "stop", "skip", "p"]:
@@ -163,6 +166,7 @@ class CustomHelpCommand(commands.HelpCommand):
 
         categories = [
             (i18n.t(lang, "help_games"), games_cmds),
+            (i18n.t(lang, "help_animals"), animal_cmds),
             (i18n.t(lang, "help_economy"), econ_cmds),
             (i18n.t(lang, "help_music"), music_cmds),
             (i18n.t(lang, "help_fun"), fun_cmds),
@@ -227,6 +231,7 @@ class MyBot(commands.Bot):
         await self.load_extension("slots")
         await self.load_extension("profile")
         await self.load_extension("gifs")
+        await self.load_extension("animals")
 
 bot = MyBot(
     command_prefix=get_dynamic_prefix,

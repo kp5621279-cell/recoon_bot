@@ -431,16 +431,51 @@ class Profile(commands.Cog):
         msg = await ctx.send(embed=await view.build_embed("level"), view=view)
         view.message = msg
 
-    @commands.command(name="shop", aliases=["banners"])
-    async def banners(self, ctx: commands.Context):
-        """Banner shop - dekho, kharido, equippo."""
+    @commands.command(name="shop", aliases=["banners", "astore"])
+    async def banners(self, ctx: commands.Context, section: str = None):
+        """Unified shop - banners / animals / food / abilities."""
         lang = await database.get_lang(ctx.author.id)
+        section = (section or "").lower()
+        if section in ("animals", "animal", "food", "abilities", "ability"):
+            return await self._animal_shop(ctx, lang, section)
+        return await self._banner_shop(ctx, lang)
+
+    async def _animal_shop(self, ctx, lang, section: str):
+        """Animals/Food/Abilities sections (animals.py ke catalogs se)."""
+        from animals import FOODS, ABILITIES, RARITY_META
+        COIN_A = "<:coin:1550545065397584066>"
+        if section in ("animals", "animal"):
+            species = [s for s in await database.get_all_species() if s["in_store"]]
+            lines = [f"`#{i}` {s['emoji']} **{s['name']}** — {s['price']} {COIN_A} "
+                     f"({RARITY_META[s['rarity']]['emoji']} {s['rarity'].title()})"
+                     for i, s in enumerate(species, 1)]
+            embed = discord.Embed(title=i18n.t(lang, "an_shop_animals"),
+                                  description="\n".join(lines) or "—",
+                                  color=discord.Color.orange())
+            embed.set_footer(text=i18n.t(lang, "an_shop_buy", prefix=ctx.clean_prefix))
+            return await ctx.send(embed=embed)
+        if section == "food":
+            lines = [f"{f['emoji']} **{f['name']}** — {f['price']} {COIN_A} (+{f['hearts']}❤️)"
+                     for f in FOODS.values()]
+            embed = discord.Embed(title=i18n.t(lang, "an_shop_food"),
+                                  description="\n".join(lines), color=discord.Color.red())
+            embed.set_footer(text=i18n.t(lang, "an_shop_buy", prefix=ctx.clean_prefix))
+            return await ctx.send(embed=embed)
+        lines = [f"{a['emoji']} **{a['name']}** — {a['price']} {COIN_A} — {a['desc']}"
+                 for a in ABILITIES.values()]
+        embed = discord.Embed(title=i18n.t(lang, "an_shop_abilities"),
+                              description="\n".join(lines), color=discord.Color.blurple())
+        embed.set_footer(text=i18n.t(lang, "an_shop_buy", prefix=ctx.clean_prefix))
+        return await ctx.send(embed=embed)
+
+    async def _banner_shop(self, ctx, lang):
         all_b = await database.get_all_banners()
         owned = {b["id"] for b in await database.get_owned_banners(ctx.author.id)}
 
         embed = discord.Embed(
             title=i18n.t(lang, "bs_title"),
-            description=i18n.t(lang, "bs_desc", prefix=ctx.clean_prefix, coin=COIN),
+            description=i18n.t(lang, "bs_desc", prefix=ctx.clean_prefix, coin=COIN)
+            + "\n\n" + i18n.t(lang, "an_shop_hint", prefix=ctx.clean_prefix),
             color=discord.Color.purple(),
         )
         for b in all_b:
@@ -462,10 +497,19 @@ class Profile(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name="buy")
-    async def buy(self, ctx: commands.Context, item: str = None, banner_id: int = None):
-        """Buy banner: !buy banner <id>"""
+    async def buy(self, ctx: commands.Context, item: str = None, ref=None):
+        """Buy: wbuy banner <id> | wbuy animal <#> | wbuy food <name> | wbuy ability <name>"""
         lang = await database.get_lang(ctx.author.id)
-        if item is None or item.lower() != "banner" or banner_id is None:
+        item = (item or "").lower()
+        if item in ("animal", "food", "ability"):
+            from animals import handle_buy
+            return await handle_buy(ctx, lang, item, ref)
+        if item != "banner" or ref is None:
+            return await ctx.send(i18n.t(lang, "bs_usage", prefix=ctx.clean_prefix, mention=ctx.author.mention))
+        banner_id = ref
+        try:
+            banner_id = int(banner_id)
+        except (TypeError, ValueError):
             return await ctx.send(i18n.t(lang, "bs_usage", prefix=ctx.clean_prefix, mention=ctx.author.mention))
 
         banner = await database.get_banner(banner_id)

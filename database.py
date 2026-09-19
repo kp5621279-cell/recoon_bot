@@ -157,7 +157,66 @@ async def init_db():
                 PRIMARY KEY (guild_id, channel_id)
             )
         ''')
-            
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS animals (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner_id    INTEGER NOT NULL,
+                species_id  TEXT NOT NULL,
+                nickname    TEXT,
+                level       INTEGER DEFAULT 1,
+                xp          INTEGER DEFAULT 0,
+                wins        INTEGER DEFAULT 0,
+                losses      INTEGER DEFAULT 0,
+                hunger      INTEGER DEFAULT 5,
+                abilities   TEXT DEFAULT '[]',
+                obtained    TEXT DEFAULT 'store',
+                created_at  REAL
+            )
+        ''')
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS animal_species (
+                id       TEXT PRIMARY KEY,
+                name     TEXT NOT NULL,
+                emoji    TEXT NOT NULL,
+                rarity   TEXT NOT NULL,
+                hp       INTEGER NOT NULL,
+                atk      INTEGER NOT NULL,
+                def      INTEGER NOT NULL,
+                price    INTEGER DEFAULT 0,
+                in_store INTEGER DEFAULT 0,
+                image_url TEXT
+            )
+        ''')
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS inventory (
+                user_id   INTEGER NOT NULL,
+                item_type TEXT NOT NULL,
+                item_id   TEXT NOT NULL,
+                qty       INTEGER DEFAULT 0,
+                PRIMARY KEY (user_id, item_type, item_id)
+            )
+        ''')
+
+        try:
+            await db.execute('ALTER TABLE animals ADD COLUMN hunger INTEGER DEFAULT 5')
+        except Exception:
+            pass
+        try:
+            await db.execute("ALTER TABLE animals ADD COLUMN abilities TEXT DEFAULT '[]'")
+        except Exception:
+            pass
+        try:
+            await db.execute('ALTER TABLE users ADD COLUMN active_animal INTEGER')
+        except Exception:
+            pass
+        try:
+            await db.execute('ALTER TABLE users ADD COLUMN last_hunt REAL DEFAULT 0')
+        except Exception:
+            pass
+
         await db.commit()
 
 async def get_prefix(guild_id: int) -> str:
@@ -658,6 +717,246 @@ async def get_all_banners():
         async with db.execute('SELECT id, name, price, gradient, file_path, url FROM banners ORDER BY price') as cursor:
             rows = await cursor.fetchall()
             return [{"id": r[0], "name": r[1], "price": r[2], "gradient": r[3], "file_path": r[4], "url": r[5]} for r in rows]
+
+# ------------------- Animals (collect & fight) -------------------
+
+async def upsert_species(species: dict):
+    """Species define/replace karo (id unique)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            'INSERT INTO animal_species (id, name, emoji, rarity, hp, atk, def, price, in_store, image_url) '
+            'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) '
+            'ON CONFLICT(id) DO UPDATE SET name = excluded.name, emoji = excluded.emoji, '
+            'rarity = excluded.rarity, hp = excluded.hp, atk = excluded.atk, def = excluded.def, '
+            'price = excluded.price, in_store = excluded.in_store, image_url = excluded.image_url',
+            (species["id"], species["name"], species["emoji"], species["rarity"],
+             species["hp"], species["atk"], species["def"],
+             species.get("price", 0), 1 if species.get("in_store") else 0,
+             species.get("image_url")),
+        )
+        await db.commit()
+
+async def get_species(species_id: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            'SELECT id, name, emoji, rarity, hp, atk, def, price, in_store, image_url '
+            'FROM animal_species WHERE id = ?', (species_id,),
+        ) as cursor:
+            row = await cursor.fetchone()
+    if not row:
+        return None
+    return {"id": row[0], "name": row[1], "emoji": row[2], "rarity": row[3], "hp": row[4],
+            "atk": row[5], "def": row[6], "price": row[7], "in_store": bool(row[8]), "image_url": row[9]}
+
+async def get_all_species(in_store_only: bool = False):
+    q = ('SELECT id, name, emoji, rarity, hp, atk, def, price, in_store, image_url '
+         'FROM animal_species')
+    if in_store_only:
+        q += ' WHERE in_store = 1'
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(q + ' ORDER BY price DESC') as cursor:
+            rows = await cursor.fetchall()
+    return [{"id": r[0], "name": r[1], "emoji": r[2], "rarity": r[3], "hp": r[4],
+             "atk": r[5], "def": r[6], "price": r[7], "in_store": bool(r[8]), "image_url": r[9]} for r in rows]
+
+async def add_animal(owner_id: int, species_id: str, obtained: str = "store") -> int:
+    """Naya animal kisi ke collection me daalo, animal_id return karo."""
+    import time as _time
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            'INSERT INTO animals (owner_id, species_id, obtained, created_at) VALUES (?, ?, ?, ?)',
+            (owner_id, species_id, obtained, _time.time()),
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+async def get_animal(animal_id: int):
+    """Animal + uski species ek saath (None = exist nahi karta)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            'SELECT id, owner_id, species_id, nickname, level, xp, wins, losses, hunger, abilities, obtained '
+            'FROM animals WHERE id = ?', (animal_id,),
+        ) as cursor:
+            row = await cursor.fetchone()
+    if not row:
+        return None
+    sp = await get_species(row[2])
+    if not sp:
+        return None
+    import json as _json
+    try:
+        abilities = _json.loads(row[9]) if row[9] else []
+    except Exception:
+        abilities = []
+    return {"id": row[0], "owner_id": row[1], "species": sp, "nickname": row[3],
+            "level": row[4] or 1, "xp": row[5] or 0, "wins": row[6] or 0, "losses": row[7] or 0,
+            "hunger": row[8] if row[8] is not None else 5, "abilities": abilities, "obtained": row[10]}
+
+async def get_user_animals(owner_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            'SELECT id FROM animals WHERE owner_id = ? ORDER BY id', (owner_id,),
+        ) as cursor:
+            rows = await cursor.fetchall()
+    out = []
+    for (aid,) in rows:
+        a = await get_animal(aid)
+        if a:
+            out.append(a)
+    return out
+
+async def count_user_animals(owner_id: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT COUNT(*) FROM animals WHERE owner_id = ?', (owner_id,)) as cursor:
+            row = await cursor.fetchone()
+            return row[0] or 0
+
+async def delete_animal(animal_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('DELETE FROM animals WHERE id = ?', (animal_id,))
+        await db.execute('UPDATE users SET active_animal = NULL WHERE active_animal = ?', (animal_id,))
+        await db.commit()
+
+async def set_active_animal(user_id: int, animal_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('UPDATE users SET active_animal = ? WHERE user_id = ?', (animal_id, user_id))
+        await db.commit()
+
+async def get_active_animal(user_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT active_animal FROM users WHERE user_id = ?', (user_id,)) as cursor:
+            row = await cursor.fetchone()
+    if not row or not row[0]:
+        return None
+    animal = await get_animal(row[0])
+    if animal and animal["owner_id"] != user_id:
+        return None
+    return animal
+
+async def animal_gain_xp(animal_id: int, amount: int) -> tuple:
+    """Animal XP do, (old_level, new_level) return karo. Level N ke liye 100*N^2 XP."""
+    animal = await get_animal(animal_id)
+    if not animal:
+        return (1, 1)
+    old_level = animal["level"]
+    new_xp = animal["xp"] + amount
+    level = old_level
+    while 100 * level * level <= new_xp:
+        level += 1
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('UPDATE animals SET xp = ?, level = ? WHERE id = ?', (new_xp, level, animal_id))
+        await db.commit()
+    return (old_level, level)
+
+async def animal_record_result(animal_id: int, won: bool):
+    col = "wins" if won else "losses"
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('UPDATE animals SET ' + col + ' = ' + col + ' + 1 WHERE id = ?', (animal_id,))
+        await db.commit()
+
+async def animal_set_hunger(animal_id: int, hunger: int):
+    hunger = max(0, min(5, hunger))
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('UPDATE animals SET hunger = ? WHERE id = ?', (hunger, animal_id))
+        await db.commit()
+
+async def animal_add_ability(animal_id: int, ability_id: str) -> bool:
+    """Ability add karo (max 3). False = already hai ya limit cross."""
+    animal = await get_animal(animal_id)
+    if not animal or len(animal["abilities"]) >= 3 or ability_id in animal["abilities"]:
+        return False
+    import json as _json
+    abilities = animal["abilities"] + [ability_id]
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('UPDATE animals SET abilities = ? WHERE id = ?',
+                         (_json.dumps(abilities), animal_id))
+        await db.commit()
+    return True
+
+async def animal_breed(parent_a: dict, parent_b: dict) -> int:
+    """Do parents se naya animal: stats 50/50 mix, species random parent se,
+    10% chance rarity ek step up ho jaye. Naya animal_id return karo."""
+    import secrets as _secrets
+    sp = dict(parent_a["species"] if _secrets.randbelow(100) < 50 else parent_b["species"])
+    # 50/50 stat mix
+    for key in ("hp", "atk", "def"):
+        sp[key] = max(1, round((parent_a["species"][key] + parent_b["species"][key]) / 2))
+    # 10% rarity upgrade
+    order = ["common", "uncommon", "rare", "mythic", "gold"]
+    try:
+        idx = order.index(sp["rarity"])
+    except ValueError:
+        idx = 0
+    if _secrets.randbelow(100) < 10 and idx < len(order) - 1:
+        sp["rarity"] = order[idx + 1]
+        sp["id"] = sp["id"] + "_bred"
+        sp["price"] = 0
+        sp["in_store"] = False
+        await upsert_species(sp)
+    return await add_animal(parent_a["owner_id"], sp["id"], obtained="bred")
+
+async def set_nickname(animal_id: int, nickname: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('UPDATE animals SET nickname = ? WHERE id = ?', (nickname[:30], animal_id))
+        await db.commit()
+
+async def set_last_hunt(user_id: int, ts: float):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('UPDATE users SET last_hunt = ? WHERE user_id = ?', (ts, user_id))
+        await db.commit()
+
+async def get_last_hunt(user_id: int) -> float:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT last_hunt FROM users WHERE user_id = ?', (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            return (row[0] if row and row[0] else 0.0)
+
+async def set_animal_image_url(species_id: str, url: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('UPDATE animal_species SET image_url = ? WHERE id = ?', (url, species_id))
+        await db.commit()
+
+async def inv_add(user_id: int, item_type: str, item_id: str, qty: int = 1):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            'INSERT INTO inventory (user_id, item_type, item_id, qty) VALUES (?, ?, ?, ?) '
+            'ON CONFLICT(user_id, item_type, item_id) DO UPDATE SET qty = qty + ?',
+            (user_id, item_type, item_id, qty, qty),
+        )
+        await db.commit()
+
+async def inv_take(user_id: int, item_type: str, item_id: str, qty: int = 1) -> bool:
+    """Item nikalo. False = enough nahi hai."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            'UPDATE inventory SET qty = qty - ? WHERE user_id = ? AND item_type = ? AND item_id = ? AND qty >= ?',
+            (qty, user_id, item_type, item_id, qty),
+        )
+        if cursor.rowcount == 0:
+            return False
+        await db.execute(
+            'DELETE FROM inventory WHERE user_id = ? AND item_type = ? AND item_id = ? AND qty <= 0',
+            (user_id, item_type, item_id),
+        )
+        await db.commit()
+        return True
+
+async def inv_count(user_id: int, item_type: str, item_id: str) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            'SELECT qty FROM inventory WHERE user_id = ? AND item_type = ? AND item_id = ?',
+            (user_id, item_type, item_id),
+        ) as cursor:
+            row = await cursor.fetchone()
+            return row[0] if row else 0
+
+async def inv_all(user_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            'SELECT item_type, item_id, qty FROM inventory WHERE user_id = ? AND qty > 0 ORDER BY item_type',
+            (user_id,),
+        ) as cursor:
+            return [(r[0], r[1], r[2]) for r in await cursor.fetchall()]
 
 async def set_banner_url(banner_id: int, url: str):
     """Banner ka preview URL set/backfill karo."""
