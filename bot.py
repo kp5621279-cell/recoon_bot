@@ -50,7 +50,11 @@ class CustomHelpCommand(commands.HelpCommand):
         music_cmds = []
         
         for command in await self.filter_commands(self.context.bot.commands, sort=True):
-            cmd_info = f"**{self.context.clean_prefix}{command.name}** - {command.short_doc}"
+            # Help description pehle user ki language se, fallback docstring
+            desc = i18n.t(lang, f"h_{command.name}")
+            if desc == f"h_{command.name}":
+                desc = command.short_doc
+            cmd_info = f"**{self.context.clean_prefix}{command.name}** - {desc}"
             if command.name in ["coin", "aviator", "mine"]:
                 games_cmds.append(cmd_info)
             elif command.name in ["bal", "daily", "req", "pay"]:
@@ -669,17 +673,14 @@ async def request_coins(ctx: commands.Context, amount: int, target: discord.Memb
     if target.id == ctx.author.id:
         return await ctx.send(i18n.t(lang, "no_self_target"))
 
+    lang = await database.get_lang(ctx.author.id)
     target_data = await database.get_user(target.id)
     if not target_data or not target_data["agreed"]:
-        return await ctx.send(
-            f"❌ **{target.display_name}** doesn't play games - they haven't agreed to the bot's terms yet."
-        )
+        return await ctx.send(i18n.t(lang, "not_agreed", user=target.display_name))
 
     key = (ctx.author.id, target.id)
     if key in PENDING_REQUESTS:
-        return await ctx.send(
-            f"⏳ You already have a pending request with **{target.display_name}**. Wait for them to answer that one."
-        )
+        return await ctx.send(i18n.t(lang, "pending_req", user=target.display_name))
 
     view = CoinRequestView(ctx.author, target, amount)
     try:
@@ -687,9 +688,7 @@ async def request_coins(ctx: commands.Context, amount: int, target: discord.Memb
             embed=coin_request_embed(ctx.author, amount, target_data["coins"]), view=view
         )
     except discord.Forbidden:
-        return await ctx.send(
-            f"❌ I couldn't DM **{target.display_name}** - their DMs are closed, so I can't deliver the request."
-        )
+        return await ctx.send(i18n.t(lang, "dm_closed", user=target.display_name))
 
     PENDING_REQUESTS.add(key)
     await ctx.send(i18n.t(
@@ -761,11 +760,12 @@ async def daily_reward(ctx: commands.Context):
     now = time.time()
     cooldown = 12 * 3600 # 12 hours in seconds
 
+    lang = await database.get_lang(ctx.author.id)
     if now - last_daily < cooldown:
         time_left = int(cooldown - (now - last_daily))
         hours = time_left // 3600
         minutes = (time_left % 3600) // 60
-        await ctx.send(f"⏳ You have already claimed your daily reward. Please wait **{hours}h {minutes}m** before claiming again.")
+        await ctx.send(i18n.t(lang, "daily_wait", time=f"{hours}h {minutes}m"))
         return
 
     import secrets
@@ -775,7 +775,7 @@ async def daily_reward(ctx: commands.Context):
     await database.update_daily_time(ctx.author.id, now)
     
     new_bal = user_data["coins"] + reward
-    await ctx.send(f"🎁 Yay! You received **{reward}** free {COIN}. Your new balance is **{new_bal}**.")
+    await ctx.send(i18n.t(lang, "daily_given", amount=reward, coin=COIN, balance=new_bal))
 
 def main() -> None:
     if not DISCORD_TOKEN:
