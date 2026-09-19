@@ -58,5 +58,6 @@
   "daily_given": "Yeay! Kamu mendapat **{amount}** {coin} gratis. Saldo baru: **{balance}**.",
   "not_agreed": "**{user}** belum menyetujui ketentuan bot.",
   "pending_req": "Permintaan dengan **{user}** sudah ada yang menunggu.",
-  "dm_closed": "Tidak bisa DM **{user}** - DM-nya tertutup."
+  "dm_closed": "Tidak bisa DM **{user}** - DM-nya tertutup.",
+  "h_ds": "Nonaktifkan bot di channel/server ini."
 }

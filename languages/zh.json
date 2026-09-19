@@ -58,5 +58,6 @@
   "daily_given": "太好了!你获得了 **{amount}** 免费 {coin}。新余额:**{balance}**。",
   "not_agreed": "**{user}** 尚未同意机器人条款。",
   "pending_req": "你与 **{user}** 已有等待中的请求。",
-  "dm_closed": "无法私信 **{user}** - 其私信已关闭。"
+  "dm_closed": "无法私信 **{user}** - 其私信已关闭。",
+  "h_ds": "在此频道/服务器禁用机器人。"
 }

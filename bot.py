@@ -48,7 +48,9 @@ class CustomHelpCommand(commands.HelpCommand):
         econ_cmds = []
         config_cmds = []
         music_cmds = []
-        
+        admin_cmds = []
+        is_owner = await self.context.bot.is_owner(self.context.author)
+
         for command in await self.filter_commands(self.context.bot.commands, sort=True):
             # Help description pehle user ki language se, fallback docstring
             desc = i18n.t(lang, f"h_{command.name}")
@@ -65,6 +67,10 @@ class CustomHelpCommand(commands.HelpCommand):
                 config_cmds.append(cmd_info)
             elif command.name in ["play", "join", "leave", "stop", "skip"]:
                 music_cmds.append(cmd_info)
+            elif command.name == "ds":
+                # ds admin-only hai - sirf admins/owner ko dikhao
+                if self.context.author.guild_permissions.manage_guild or is_owner:
+                    admin_cmds.append(cmd_info)
 
         if games_cmds:
             embed.add_field(name=i18n.t(lang, "help_games"), value="\n".join(games_cmds), inline=False)
@@ -74,6 +80,8 @@ class CustomHelpCommand(commands.HelpCommand):
             embed.add_field(name=i18n.t(lang, "help_music"), value="\n".join(music_cmds), inline=False)
         if config_cmds:
             embed.add_field(name=i18n.t(lang, "help_config"), value="\n".join(config_cmds), inline=False)
+        if admin_cmds:
+            embed.add_field(name="🛡️ Admin", value="\n".join(admin_cmds), inline=False)
 
         embed.set_footer(text=i18n.t(lang, "help_footer", prefix=p))
         await self.get_destination().send(embed=embed)

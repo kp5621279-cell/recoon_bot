@@ -58,5 +58,6 @@
   "daily_given": "Yay! You received **{amount}** free {coin}. Your new balance is **{balance}**.",
   "not_agreed": "**{user}** doesn't play games - they haven't agreed to the bot's terms yet.",
   "pending_req": "You already have a pending request with **{user}**. Wait for them to answer that one.",
-  "dm_closed": "I couldn't DM **{user}** - their DMs are closed, so I can't deliver the request."
+  "dm_closed": "I couldn't DM **{user}** - their DMs are closed, so I can't deliver the request.",
+  "h_ds": "Disable the bot in this channel/server."
 }

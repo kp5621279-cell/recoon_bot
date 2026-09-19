@@ -58,5 +58,6 @@
   "daily_given": "Dhanyavad! Tumhala **{amount}** mofat {coin} milale. Navin shillak: **{balance}**.",
   "not_agreed": "**{user}** ajun ati many kelele nahit.",
   "pending_req": "**{user}** sobat aadhi vinanti pralambit aahe.",
-  "dm_closed": "**{user}** la DM karu shaklo nahi - tyancha DM band ahet."
+  "dm_closed": "**{user}** la DM karu shaklo nahi - tyancha DM band ahet.",
+  "h_ds": "Ya channel/server madhye bot disable kara."
 }

@@ -58,5 +58,6 @@
   "daily_given": "Yay! Tumhe **{amount}** free {coin} mile. Naya balance: **{balance}**.",
   "not_agreed": "**{user}** abhi bot ke terms agree nahi kiya - wo games nahi khelta.",
   "pending_req": "Tumhari **{user}** ke saath pehle se ek request pending hai. Uska jawab ka intezaar karo.",
-  "dm_closed": "**{user}** ko DM nahi kar paya - uske DMs band hain, request pahunch nahi sakti."
+  "dm_closed": "**{user}** ko DM nahi kar paya - uske DMs band hain, request pahunch nahi sakti.",
+  "h_ds": "Is channel/server me bot disable karo."
 }

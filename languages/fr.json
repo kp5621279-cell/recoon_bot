@@ -58,5 +58,6 @@
   "daily_given": "Bravo! Vous recevez **{amount}** {coin} gratuits. Nouveau solde: **{balance}**.",
   "not_agreed": "**{user}** n'a pas encore accepte les conditions du bot.",
   "pending_req": "Une demande avec **{user}** est deja en attente.",
-  "dm_closed": "Impossible de DM **{user}** - ses DMs sont fermes."
+  "dm_closed": "Impossible de DM **{user}** - ses DMs sont fermes.",
+  "h_ds": "Desactivez le bot dans ce salon/serveur."
 }
