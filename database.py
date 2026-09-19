@@ -7,6 +7,10 @@ DATA_DIR = os.getenv("DATA_DIR", os.path.dirname(__file__))
 os.makedirs(DATA_DIR, exist_ok=True)
 DB_PATH = os.path.join(DATA_DIR, "bot_data.db")
 
+# Startup par saaf dikhe ki data kahan save ho raha hai (Railway logs me check karna easy)
+if os.getenv("DATA_DIR"):
+    print(f"🗄️ Persistent storage ON: {DB_PATH}")
+
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute('''
