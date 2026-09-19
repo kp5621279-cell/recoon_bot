@@ -21,9 +21,10 @@ ytdl_format_options = {
     'no_warnings': True,
     'default_search': 'auto',
     'source_address': '0.0.0.0',
-    # 'tv_simply' (naya) + 'tv' client aksar YouTube ke "confirm you're not a bot"
-    # check ko bypass karte hain; fail hone par yt-dlp khud agle client try karta hai
-    'extractor_args': {'youtube': {'player_client': ['tv_simply', 'tv', 'web']}}
+    # YouTube ka bot-check client-wise alag hota hai: ye chain try karta hai
+    # tv_simply -> tv -> android -> web. Android abhi sabse reliable hai,
+    # tv clients bhi aksar bina cookies chal jate hain.
+    'extractor_args': {'youtube': {'player_client': ['tv_simply', 'tv', 'android', 'web']}}
 }
 
 # Cookies support: local PC par cookies.txt file, Railway par COOKIES_B64 env var
