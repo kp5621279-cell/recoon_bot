@@ -8,15 +8,39 @@ import i18n
 BANNER_URL = "https://cdn.discordapp.com/emojis/1550526211388612608.png?size=512"
 
 # nekos.best categories - sab cute anime gifs, no API key chahiye
+# (key, emoji) - URL pattern common hai
 ACTIONS = [
-    ("kiss",   "💋", "https://nekos.best/api/v2/{cat}?amount=1"),
-    ("hug",    "🤗", "https://nekos.best/api/v2/{cat}?amount=1"),
-    ("pat",    "🖐️", "https://nekos.best/api/v2/{cat}?amount=1"),
-    ("cuddle", "🫂", "https://nekos.best/api/v2/{cat}?amount=1"),
-    ("poke",   "👉", "https://nekos.best/api/v2/{cat}?amount=1"),
-    ("bite",   "🦷", "https://nekos.best/api/v2/{cat}?amount=1"),
-    ("slap",   "👋", "https://nekos.best/api/v2/{cat}?amount=1"),
-    ("wave",   "👋", "https://nekos.best/api/v2/{cat}?amount=1"),
+    # pyaar wale
+    ("kiss",     "💋"),
+    ("hug",      "🤗"),
+    ("pat",      "🖐️"),
+    ("cuddle",   "🫂"),
+    ("poke",     "👉"),
+    ("bite",     "🦷"),
+    ("slap",     "👋"),
+    ("wave",     "👋"),
+    # action/dhamaka wale (user ke maange)
+    ("kick",     "🦵"),
+    ("punch",    "👊"),
+    ("bonk",     "🔨"),
+    ("shoot",    "🔫"),
+    ("yeet",     "🚀"),
+    # aur bhi mast
+    ("highfive", "🙌"),
+    ("feed",     "🍚"),
+    ("tickle",   "🪶"),
+    ("carry",    "🧸"),
+    ("facepalm", "🤦"),
+    ("tableflip", "(╯°□°）╯︵ ┻━┻"),
+    ("handhold", "🤝"),
+    ("shrug",    "🤷"),
+    ("wink",     "😉"),
+    ("blush",    "😊"),
+    ("smug",     "😏"),
+    ("laugh",    "😂"),
+    ("cry",      "😭"),
+    ("angry",    "😠"),
+    ("dance",    "💃"),
 ]
 
 _api_lock = None  # lazily created
@@ -78,40 +102,42 @@ class Gifs(commands.Cog):
         """Kiss someone with a cute gif!"""
         await self._do_action(ctx, "kiss", "💋", target)
 
-    @commands.command(name="hug")
-    async def hug(self, ctx, target: discord.Member = None):
-        """Hug someone with a cute gif!"""
-        await self._do_action(ctx, "hug", "🤗", target)
+    # Baaki sab actions dynamic generate (ACTIONS list se)
+    # 'fuck' user-maanga punch variant hai (Discord-safe command name)
+    def _make_action(key: str, emoji: str, aliases=()):
+        async def action_cmd(self, ctx, target: discord.Member = None):
+            await self._do_action(ctx, key, emoji, target)
+        action_cmd.__name__ = f"gif_{key}"
+        action_cmd.__doc__ = f"{key.title()} someone with a gif!"
+        return commands.command(name=key, aliases=list(aliases))(action_cmd)
 
-    @commands.command(name="pat")
-    async def pat(self, ctx, target: discord.Member = None):
-        """Head pat someone with a cute gif!"""
-        await self._do_action(ctx, "pat", "🖐️", target)
-
-    @commands.command(name="cuddle")
-    async def cuddle(self, ctx, target: discord.Member = None):
-        """Cuddle someone with a cute gif!"""
-        await self._do_action(ctx, "cuddle", "🫂", target)
-
-    @commands.command(name="poke")
-    async def poke(self, ctx, target: discord.Member = None):
-        """Poke someone with a cute gif!"""
-        await self._do_action(ctx, "poke", "👉", target)
-
-    @commands.command(name="bite")
-    async def bite(self, ctx, target: discord.Member = None):
-        """Playfully bite someone with a cute gif!"""
-        await self._do_action(ctx, "bite", "🦷", target)
-
-    @commands.command(name="slap")
-    async def slap(self, ctx, target: discord.Member = None):
-        """Slap someone with a gif!"""
-        await self._do_action(ctx, "slap", "👋", target)
-
-    @commands.command(name="wave")
-    async def wave(self, ctx, target: discord.Member = None):
-        """Wave at someone with a cute gif!"""
-        await self._do_action(ctx, "wave", "👋", target)
+    hug = _make_action("hug", "🤗")
+    pat = _make_action("pat", "🖐️")
+    cuddle = _make_action("cuddle", "🫂")
+    poke = _make_action("poke", "👉")
+    bite = _make_action("bite", "🦷")
+    slap = _make_action("slap", "👋")
+    wave = _make_action("wave", "👋")
+    kick = _make_action("kick", "🦵")
+    punch = _make_action("punch", "👊", aliases=["fuck"])
+    bonk = _make_action("bonk", "🔨")
+    shoot = _make_action("shoot", "🔫")
+    yeet = _make_action("yeet", "🚀")
+    highfive = _make_action("highfive", "🙌")
+    feed = _make_action("feed", "🍚")
+    tickle = _make_action("tickle", "🪶")
+    carry = _make_action("carry", "🧸")
+    facepalm = _make_action("facepalm", "🤦")
+    tableflip = _make_action("tableflip", "🫠")
+    handhold = _make_action("handhold", "🤝")
+    shrug = _make_action("shrug", "🤷")
+    wink = _make_action("wink", "😉")
+    blush = _make_action("blush", "😊")
+    smug = _make_action("smug", "😏")
+    laugh = _make_action("laugh", "😂")
+    cry = _make_action("cry", "😭")
+    angry = _make_action("angry", "😠")
+    dance = _make_action("dance", "💃")
 
 
 async def setup(bot):
