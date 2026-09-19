@@ -20,19 +20,12 @@ CARD_W, CARD_H = 1000, 520
 PANEL_TOP = 310  # iske niche solid stats panel hai - banner area lamba (details ke liye)
 CARD_QUALITY = 88  # JPG quality (chhoti file, achha look)
 
-# Default banners: gradient hex colors (top->bottom). Prices in coins.
-DEFAULT_BANNERS = [
-    ("Sunset",   5000,  "ff7e5f|feb47b|ffcf6f", None),
-    ("Ocean",    5000,  "2193b0|6dd5ed|b8e6f5", None),
-    ("Neon",     12000, "8e2de2|4a00e0|ff2a6d", None),
-    ("Forest",   12000, "134e5e|71b280|c9e4a5", None),
-    ("Midnight", 25000, "0f0c29|302b63|24243e", None),
-    ("Gold",     50000, "b8860b|ffd700|fff3b0", None),
-]
-
 # Custom file banners (repo me shipped) - (name, price, file_path)
+# Ye hi store ka poora catalog hai (owner !addbanner se aur bhi add kar sakta hai)
 CUSTOM_BANNERS = [
-    ("Recoon", 100, "banner_images/banner_emote.png"),
+    ("Recoon",  100,   "banner_images/banner_emote.png"),
+    ("Mystery", 5000,  "banner_images/banner_mystery.png"),
+    ("Blue",    10000, "banner_images/banner_blue.png"),
 ]
 
 
@@ -281,7 +274,7 @@ class Profile(commands.Cog):
         f = discord.File(io.BytesIO(jpg), filename="profile.jpg")
         await ctx.send(file=f)
 
-    @commands.command(name="banners")
+    @commands.command(name="shop", aliases=["banners"])
     async def banners(self, ctx: commands.Context):
         """Banner shop - dekho, kharido, equippo."""
         lang = await database.get_lang(ctx.author.id)
@@ -386,12 +379,12 @@ class Profile(commands.Cog):
 async def setup(bot):
     # init_db pehle (tables honi chahiye - startup hook se pehle setup chal sakta hai)
     await database.init_db()
-    # Default gradient banners ensure karo (sirf pehli baar - name match karke)
+    # Purane default gradient banners hatao (ye ab nahi bikte)
+    for b in await database.get_all_banners():
+        if b["gradient"]:
+            await database.remove_banner(b["id"])
+    # Custom file banners ensure karo (sirf pehli baar - name match karke)
     existing = {b["name"] for b in await database.get_all_banners()}
-    for name, price, grad, _ in DEFAULT_BANNERS:
-        if name not in existing:
-            await database.add_banner(name, price, gradient=grad)
-    # Custom file banners (repo ke saath shipped)
     for name, price, path in CUSTOM_BANNERS:
         if name not in existing and os.path.exists(path):
             await database.add_banner(name, price, gradient=None, file_path=path)
