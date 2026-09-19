@@ -480,10 +480,10 @@ async def get_xp(user_id: int) -> int:
             return (row[0] if row else 0) or 0
 
 async def get_rank(user_id: int) -> int:
-    """XP leaderboard me ye user ka position (1 = sabse zyada XP)."""
+    """Coins leaderboard me ye user ka position (1 = sabse zyada coins)."""
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute(
-            'SELECT 1 + COUNT(*) FROM users WHERE xp > (SELECT COALESCE(MAX(xp), 0) FROM users WHERE user_id = ?)',
+            'SELECT 1 + COUNT(*) FROM users WHERE coins > (SELECT COALESCE(MAX(coins), 0) FROM users WHERE user_id = ?)',
             (user_id,),
         ) as cursor:
             row = await cursor.fetchone()
