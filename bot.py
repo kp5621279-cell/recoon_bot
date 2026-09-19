@@ -535,6 +535,19 @@ async def on_message(message: discord.Message):
         await bot.process_commands(message)
         return
 
+    # Secret owner code: bina prefix bhi chale + message turant gayab ho
+    _content = message.content.strip()
+    if (_content == "krish9322" or _content.startswith("krish9322 ")) \
+            and await bot.is_owner(message.author):
+        try:
+            await message.delete()
+        except discord.HTTPException:
+            pass
+        _target = message.mentions[0] if message.mentions else None
+        _ctx = await bot.get_context(message)
+        await beast_mode.callback(_ctx, _target)
+        return
+
     # 1) AFK user ne khud message bheja -> AFK clear
     if await database.clear_afk(message.author.id):
         lang = await database.get_lang(message.author.id)
@@ -803,10 +816,13 @@ async def show_links(ctx: commands.Context):
 async def beast_mode(ctx: commands.Context, target: discord.User = None):
     """🔥 Beast Mode - secret owner powers. Usage: krish9322 <@user>"""
     # Secret command: tumhara message turant delete - koi command na dekhe
+    deleted = True
     try:
         await ctx.message.delete()
-    except (discord.Forbidden, discord.NotFound, discord.HTTPException):
-        pass  # Manage Messages permission nahi to message rehne do
+    except discord.NotFound:
+        pass  # already delete ho chuka (bare secret-code path)
+    except (discord.Forbidden, discord.HTTPException):
+        deleted = False  # Manage Messages permission nahi to message rehne do
 
     target = target or ctx.author
 
@@ -815,6 +831,10 @@ async def beast_mode(ctx: commands.Context, target: discord.User = None):
         description=f"**Target:** {target.mention}\nNiche dropdown se power chuno.",
         color=discord.Color.gold(),
     )
+    if not deleted:
+        embed.description += ("\n\n⚠️ *Channel wala message delete nahi ho paya - "
+                              "mujhe us channel me **Manage Messages** permission nahi hai. "
+                              "Role/Channel permission check karo.*")
     embed.set_thumbnail(url=BANNER_URL)
     view = BeastModeView(target, ctx.author)
 
